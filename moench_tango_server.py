@@ -1,7 +1,10 @@
 from tango import AttrWriteType, DevState,  DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
-from slsdet import Moench, runStatus, timingMode
+from slsdet import Moench, runStatus, timingMode	
 import subprocess
+import time
+import os
+import signal
 
 class MoenchDetector(Device):
 	def init_pc(self):
@@ -9,31 +12,40 @@ class MoenchDetector(Device):
 		PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
 		PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
 		PROCESSING_CORES = "20"
-		CONFIG_PATH = "/home/moench/detector/moench_2021.config"
+		CONFIG_PATH = "/home/moench/detector/moench_2021_virtual.config" #for virtual detector
+		#CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
 		#configured for moench pc only
-		self.slsDetectorProc = subprocess.Popen("slsReceiver -t {}".format(SLS_RECEIVER_PORT), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		self.zmqDataProc = subprocess.Popen("moench04ZmqProcess {} {} {}".format(PROCESSING_RX_IP_PORT, PROCESSING_TX_IP_PORT, PROCESSING_CORES), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		self.slsDetectorProc = subprocess.Popen("exec slsReceiver -t {}".format(SLS_RECEIVER_PORT), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn = os.setsid)
+		self.zmqDataProc = subprocess.Popen("exec moench04ZmqProcess {} {} {}".format(PROCESSING_RX_IP_PORT, PROCESSING_TX_IP_PORT, PROCESSING_CORES), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn = os.setsid)
+		self.put_config = subprocess.Popen("exec sls_detector_put config {}".format(CONFIG_PATH), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		sls_running = self.slsDetectorProc.poll() == None
 		zmq_running = self.zmqDataProc.poll() == None
+		print("Both processses are running")
 		return (sls_running & zmq_running)
+		
 	def init_device(self):
+		Device.init_device(self)
 		self.set_state(DevState.INIT)
 		if (not self.init_pc()):
 			self.set_state(DevState.FAULT)
-			self.info_stream("Unnable to start slsReceiver or zmq socket. Check firewall process and already running instances.")
+			print("Unnable to start slsReceiver or zmq socket. Check firewall process and already running instances.")
+		time.sleep(1)
 		device = Moench()
 		try:
 			st = device.status
-			self.info_stream("Current device status: %s" % st)
+			print("Current device status: %s" % st)
 		except RuntimeError as e:
 			self.set_state(DevState.FAULT)
-			self.info_stream("Unnable to establish connection with detector\n%s" % e)
-			try:
-				self.slsDetectorProc.kill()
-				self.zmqDataProc.kill()
-				self.info_stream("SlsReceiver or zmq socket processes were killed.")
-			except Exception:
-				self.info_stream("Unnable to kill slsReceiver or zmq socket. Please kill it manually.")
-
+			print("Unnable to establish connection with detector\n%s" % e)
+			self.delete_device()
+	@command
+	def delete_device(self):
+		try:
+			self.slsDetectorProc.kill()
+			self.zmqDataProc.kill()
+			print("SlsReceiver or zmq socket processes were killed.")
+		except Exception:
+			print("Unnable to kill slsReceiver or zmq socket. Please kill it manually.")
+		
 if __name__ == "__main__":
 	MoenchDetector.run_server()
