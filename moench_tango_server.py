@@ -11,14 +11,14 @@ class MoenchDetector(Device):
 		PROCESSING_CORES = "20"
 		CONFIG_PATH = "/home/moench/detector/moench_2021.config"
 		#configured for moench pc only
-		self.slsDetectorProc = subprocess.Popen("slsReceiver -t {}".format(SLS_RECEIVER_PORT))
-		self.zmqDataProc = subprocess.Popen("moench04ZmqProcess {} {} {}".format(PROCESSING_RX_IP_PORT, PROCESSING_TX_IP_PORT, PROCESSING_CORES))
-		sls_running = slsDetectorProc.poll() == None
-		zmq_running = zmqDataProc() == None
+		self.slsDetectorProc = subprocess.Popen("slsReceiver -t {}".format(SLS_RECEIVER_PORT), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		self.zmqDataProc = subprocess.Popen("moench04ZmqProcess {} {} {}".format(PROCESSING_RX_IP_PORT, PROCESSING_TX_IP_PORT, PROCESSING_CORES), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		sls_running = self.slsDetectorProc.poll() == None
+		zmq_running = self.zmqDataProc.poll() == None
 		return (sls_running & zmq_running)
 	def init_device(self):
 		self.set_state(DevState.INIT)
-		if (!self.init_pc()):
+		if (not self.init_pc()):
 			self.set_state(DevState.FAULT)
 			self.info_stream("Unnable to start slsReceiver or zmq socket. Check firewall process and already running instances.")
 		device = Moench()
@@ -32,7 +32,7 @@ class MoenchDetector(Device):
 				self.slsDetectorProc.kill()
 				self.zmqDataProc.kill()
 				self.info_stream("SlsReceiver or zmq socket processes were killed.")
-			expect Exception:
+			except Exception:
 				self.info_stream("Unnable to kill slsReceiver or zmq socket. Please kill it manually.")
 
 if __name__ == "__main__":
