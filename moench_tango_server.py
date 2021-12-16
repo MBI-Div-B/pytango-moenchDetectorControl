@@ -8,6 +8,7 @@ import signal
 
 
 class MoenchDetector(Device):
+    polling = 1000
     exposure = attribute(
         label="exposure [sec]",
         dtype="float",
@@ -108,9 +109,9 @@ class MoenchDetector(Device):
                 "Unnable to start slsReceiver or zmq socket. Check firewall process and already running instances."
             )
         time.sleep(1)
-        device = Moench()
+        self.device = Moench()
         try:
-            st = device.status
+            st = self.device.status
             self.info_stream("Current device status: %s" % st)
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
@@ -130,15 +131,15 @@ class MoenchDetector(Device):
 
     @command
     def start(self):
-        device.start()
+        self.device.start()
 
     @command
     def rx_start(self):
-        device.rx_start()
+        self.device.rx_start()
 
     @command
     def rx_stop(self):
-        device.rx_stop()
+        self.device.rx_stop()
 
 
 if __name__ == "__main__":
