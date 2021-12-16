@@ -30,7 +30,6 @@ class MoenchDetector(Device):
     highvoltage = attribute(
         label="high voltage on sensor, from 60 up to 200 [V]", dtype="int"
     )
-    exptime = attribute(label="exposure time", dtype="float")
     period = attribute(label="period between frames [sec]", dtype="float")
     samples = attribute(label="number of samples (analog only)", dtype="int")
     settings = attribute(
@@ -49,8 +48,8 @@ class MoenchDetector(Device):
         dtype="str",
     )  # converted from enums
     rx_missingpackets = attribute(
-        "number of missing packets for each port in receiver", dtype="list<int>"
-    )  # need to be checked
+        "number of missing packets for each port in receiver", dtype="int"
+    )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(label="receiver hostname or IP address", dtype="str")
     rx_tcpport = attribute(
         label="TCP port for client-receiver communication", dtype="int"
@@ -117,6 +116,145 @@ class MoenchDetector(Device):
             self.set_state(DevState.FAULT)
             self.info_stream("Unnable to establish connection with detector\n%s" % e)
             self.delete_device()
+
+    def read_exposure(self):
+        return self.device.exptime
+
+    def write_exposure(self, value):
+        self.device.exptime = value
+
+    def read_timing_mode(self):
+        if self.device.timingsource == timingMode.AUTO_TIMING:
+            return "AUTO"
+        elif self.device.timingsource == timingMode.TRIGGER_EXPOSURE:
+            return "EXT"
+        else:
+            self.info_stream("The timing mode is not assigned correctly.")
+
+    def write_timing_mode(self, value):
+        if type(value) == str:
+            if value.lower() == "auto":
+                self.info_stream("Setting auto timing mode")
+                self.device.timingsource = timingMode.AUTO_TIMING
+            elif value.lower() == "ext":
+                self.info_stream("Setting external timing mode")
+                self.device.timingsource = timingMode.TRIGGER_EXPOSURE
+        else:
+            self.info_stream('Timing mode should be "AUTO/EXT" string')
+
+    def read_triggers(self):
+        return self.device.triggers
+
+    def write_triggers(self, value):
+        self.device.triggers = value
+
+    def read_filename(self):
+        return self.device.filename
+
+    def write_filename(self, value):
+        self.device.filename = value
+
+    def read_filepath(self):
+        pass
+
+    def write_filepath(self, value):
+        pass
+
+    def read_frames(self):
+        pass
+
+    def write_frames(self, value):
+        pass
+
+    def read_filewrite(self):
+        pass
+
+    def write_filewrite(self, value):
+        pass
+
+    def read_highvoltage(self):
+        pass
+
+    def write_highvoltage(self, value):
+        pass
+
+    def read_period(self):
+        pass
+
+    def write_period(self, value):
+        pass
+
+    def read_samples(self):
+        pass
+
+    def write_samples(self, value):
+        pass
+
+    def read_settings(self):
+        pass
+
+    def write_settings(self, value):
+        pass
+
+    def read_zmqip(self):
+        pass
+
+    def write_zmqip(self, value):
+        pass
+
+    def read_zmqport(self):
+        pass
+
+    def write_zmqport(self, value):
+        pass
+
+    def read_rx_discardpolicy(self):
+        pass
+
+    def write_rx_discardpolicy(self, value):
+        pass
+
+    def read_rx_missingpackets(self):
+        pass
+
+    def write_rx_missingpackets(self, value):
+        pass
+
+    def read_rx_hostname(self):
+        pass
+
+    def write_rx_hostname(self, value):
+        pass
+
+    def read_rx_tcpport(self):
+        pass
+
+    def write_rx_tcpport(self, value):
+        pass
+
+    def read_rx_status(self):
+        pass
+
+    def write_rx_status(self, value):
+        pass
+
+    def read_rx_zmqstream(self):
+        pass
+
+    def write_rx_zmqstream(self, value):
+        pass
+
+    def read_rx_version(self):
+        pass
+
+    def write_rx_version(self, value):
+        pass
+
+    def read_firmware_version(self):
+        pass
+
+    def write_firmware_version(self, value):
+        pass
 
     @command
     def delete_device(self):
