@@ -10,45 +10,73 @@ import signal
 class MoenchDetector(Device):
     polling = 1000
     exposure = attribute(
-        label="exposure [sec]",
+        label="exposure",
         dtype="float",
+        unit="s",
+        min_value=0.0,
+        max_value=1e2,
+        min_warning=1e-6,  # check the smallest exposure when packetloss occurs
+        max_warning=0.7e2,  # check too long exposures
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         polling_period=polling,
+        doc="single frame exposure time",
     )
     timing_mode = attribute(
-        label="trigger mode [AUTO/EXT]", dtype="str"
+        label="trigger mode",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        doc="AUTO - internal trigger, EXT - external]",
     )  # see property timing in pydetector docs
-    triggers = attribute(label="number of triggers per aquire", dtype="int")
-    filename = attribute(label="file name for output data file", dtype="str")
-    filepath = attribute(label="dir where data files will be written", dtype="str")
+    triggers = attribute(
+        label="triggers", dtype="int", doc="number of triggers for an acquire session"
+    )
+    filename = attribute(
+        label="filename",
+        dtype="str",
+        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+    )
+    filepath = attribute(
+        label="filepath", dtype="str", doc="dir where data files will be written"
+    )
     frames = attribute(
-        label="number of frames per acquisition/per trigger", dtype="int"
+        label="number of frames",
+        dtype="int",
+        doc="amount of frames made per acquisition",
     )
     filewrite = attribute(label="enable or disable file writing", dtype="bool")
     highvoltage = attribute(
-        label="high voltage on sensor, from 60 up to 200 [V]", dtype="int"
+        label="high voltage on sensor",
+        dtype="int",
+        unit="V",
+        min_value=60,
+        max_value=200,
+        min_warning=70,
+        max_warning=170,
     )
-    period = attribute(label="period between frames [sec]", dtype="float")
-    samples = attribute(label="number of samples (analog only)", dtype="int")
+    period = attribute(label="period between frames", unit="s", dtype="float")
+    samples = attribute(label="number of samples)", dtype="int", doc=" (analog only")
     settings = attribute(
-        label="gain settings [G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
+        label="gain settings",
         dtype="str",
+        doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
-        label="ip address to listen to zmq data streamed out from receiver or intermediate process",
+        label="zmq ip address",
         dtype="str",
+        doc="ip to listen to zmq data streamed out from receiver or intermediate process",
     )
     zmqport = attribute(
-        label="port number to listen to zmq data", dtype="str"
+        label="zmq port", dtype="str", doc="port number to listen to zmq data"
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
         label="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
         dtype="str",
     )  # converted from enums
     rx_missingpackets = attribute(
-        "number of missing packets for each port in receiver", dtype="int"
+        label="number of missing packets for each port in receiver", dtype="int"
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(label="receiver hostname or IP address", dtype="str")
     rx_tcpport = attribute(
