@@ -14,29 +14,23 @@ This device connects to MOENCH detector and allows to control the state of the d
 
 ## Help
 
-Any advise for common problems or issues.
-```
-command to run if program contains helper info
-```
+Any additional information according to slsDetector, its python API or pytango references can be found under the links:
+
+* [slsDetectorGroup wiki](https://slsdetectorgroup.github.io/devdoc/pydetector.html)
+* [pytango reference](https://pytango.readthedocs.io/en/stable/)
 
 ## Authors
 
 Contributors names and contact info
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+[@lrlunin](https://github.com/lrlunin)
 
 ## Version History
 
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
-* 0.1
-    * Initial Release
 
 ## License
 
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
+This project is licensed under the MIT License - see the LICENSE.md file for details
 
 ## Acknowledgments
 
