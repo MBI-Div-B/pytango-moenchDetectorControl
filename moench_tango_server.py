@@ -56,8 +56,10 @@ class MoenchDetector(Device):
         min_warning=70,
         max_warning=170,
     )
-    period = attribute(label="period between frames", unit="s", dtype="float")
-    samples = attribute(label="number of samples)", dtype="int", doc=" (analog only")
+    period = attribute(
+        label="period", unit="s", dtype="float", doc="period between acquisitions"
+    )
+    samples = attribute(label="samples amount", dtype="int", doc="in analog mode only")
     settings = attribute(
         label="gain settings",
         dtype="str",
@@ -72,23 +74,38 @@ class MoenchDetector(Device):
         label="zmq port", dtype="str", doc="port number to listen to zmq data"
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
-        label="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
+        label="discard policy",
         dtype="str",
+        doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
     )  # converted from enums
     rx_missingpackets = attribute(
-        label="number of missing packets for each port in receiver", dtype="int"
+        label="missed packets",
+        dtype="int",
+        doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
-    rx_hostname = attribute(label="receiver hostname or IP address", dtype="str")
-    rx_tcpport = attribute(
-        label="TCP port for client-receiver communication", dtype="int"
+    rx_hostname = attribute(
+        label="receiver hostname", dtype="str", doc="receiver hostname or IP address"
     )
-    rx_status = attribute(label="receiver listener status", dtype="str")
+    rx_tcpport = attribute(
+        label="tcp rx_port",
+        dtype="int",
+        doc="port for for client-receiver communication via TCP",
+    )
+    rx_status = attribute(label="receiver status", dtype="str")
     rx_zmqstream = attribute(
-        label="enable/disable data streaming from receiver via zmq", dtype="bool"
+        label="data streaming via zmq",
+        dtype="bool",
+        doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
-    rx_version = attribute(label="receiver version in format [0xYYMMDD]", dtype="str")
+    rx_version = attribute(
+        label="rec. version",
+        dtype="str",
+        doc="version of receiver formatatted as [0xYYMMDD]",
+    )
 
-    firmware_version = attribute(label="detector firmware version", dtype="str")
+    firmware_version = attribute(
+        label="det. version", dtype="str", doc="version of detector software"
+    )
 
     def init_pc(self):
         SLS_RECEIVER_PORT = "1954"
@@ -133,7 +150,7 @@ class MoenchDetector(Device):
         if not self.init_pc():
             self.set_state(DevState.FAULT)
             self.info_stream(
-                "Unnable to start slsReceiver or zmq socket. Check firewall process and already running instances."
+                "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
             )
         time.sleep(1)
         self.device = Moench()
@@ -142,7 +159,7 @@ class MoenchDetector(Device):
             self.info_stream("Current device status: %s" % st)
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
-            self.info_stream("Unnable to establish connection with detector\n%s" % e)
+            self.info_stream("Unable to establish connection with detector\n%s" % e)
             self.delete_device()
 
     def read_exposure(self):
@@ -292,7 +309,7 @@ class MoenchDetector(Device):
             self.info_stream("SlsReceiver or zmq socket processes were killed.")
         except Exception:
             self.info_stream(
-                "Unnable to kill slsReceiver or zmq socket. Please kill it manually."
+                "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
 
     @command
