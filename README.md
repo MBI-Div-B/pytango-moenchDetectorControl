@@ -24,7 +24,7 @@ Any additional information according to slsDetector, its python API or pytango r
 Contributors names and contact info
 
 [@lrlunin](https://github.com/lrlunin)
-
+[@dschick](https://github.com/dschick)
 ## Version History
 
 
@@ -35,8 +35,7 @@ This project is licensed under the MIT License - see the LICENSE.md file for det
 ## Acknowledgments
 
 Inspiration, code snippets, etc.
-* [awesome-readme](https://github.com/matiassingers/awesome-readme)
-* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
-* [dbader](https://github.com/dbader/readme-template)
-* [zenorocha](https://gist.github.com/zenorocha/4526327)
-* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)
+* Martin Borchert
+* Daniel Schick
+* Bastian Pfau
+* rest of MBI crew 
