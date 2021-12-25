@@ -12,6 +12,18 @@ This device connects to MOENCH detector and allows to control the state of the d
 * `slsdet`
 * `slsDetectorGroup binary executables`
 
+## Start
+
+### locally
+Start server via command:
+* `python moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1`
+and then connect from itango:
+* `localhost:1234/id1/tests/dev1#dbase=no`
+
+### production
+
+to be done...
+
 ## Help
 
 Any additional information according to slsDetector, its python API or pytango references can be found under the links:
@@ -24,6 +36,7 @@ Any additional information according to slsDetector, its python API or pytango r
 Contributors names and contact info
 
 [@lrlunin](https://github.com/lrlunin)
+
 [@dschick](https://github.com/dschick)
 ## Version History
 
