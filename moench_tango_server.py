@@ -169,9 +169,9 @@ class MoenchDetector(Device):
         self.device.exptime = value
 
     def read_timing_mode(self):
-        if self.device.timingsource == timingMode.AUTO_TIMING:
+        if self.device.timing == timingMode.AUTO_TIMING:
             return "AUTO"
-        elif self.device.timingsource == timingMode.TRIGGER_EXPOSURE:
+        elif self.device.timing == timingMode.TRIGGER_EXPOSURE:
             return "EXT"
         else:
             self.info_stream("The timing mode is not assigned correctly.")
@@ -180,10 +180,10 @@ class MoenchDetector(Device):
         if type(value) == str:
             if value.lower() == "auto":
                 self.info_stream("Setting auto timing mode")
-                self.device.timingsource = timingMode.AUTO_TIMING
+                self.device.timing = timingMode.AUTO_TIMING
             elif value.lower() == "ext":
                 self.info_stream("Setting external timing mode")
-                self.device.timingsource = timingMode.TRIGGER_EXPOSURE
+                self.device.timing = timingMode.TRIGGER_EXPOSURE
         else:
             self.info_stream('Timing mode should be "AUTO/EXT" string')
 
