@@ -34,11 +34,15 @@ class MoenchDetector(Device):
         doc="AUTO - internal trigger, EXT - external]",
     )  # see property timing in pydetector docs
     triggers = attribute(
-        label="triggers", dtype="int", doc="number of triggers for an acquire session"
+        label="triggers",
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        doc="number of triggers for an acquire session",
     )
     filename = attribute(
         label="filename",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     filepath = attribute(
@@ -47,6 +51,7 @@ class MoenchDetector(Device):
     frames = attribute(
         label="number of frames",
         dtype="int",
+        access=AttrWriteType.READ_WRITE,
         doc="amount of frames made per acquisition",
     )
     filewrite = attribute(label="enable or disable file writing", dtype="bool")
@@ -58,27 +63,43 @@ class MoenchDetector(Device):
         max_value=200,
         min_warning=70,
         max_warning=170,
+        access=AttrWriteType.READ_WRITE,
     )
     period = attribute(
-        label="period", unit="s", dtype="float", doc="period between acquisitions"
+        label="period",
+        unit="s",
+        dtype="float",
+        access=AttrWriteType.READ_WRITE,
+        doc="period between acquisitions",
     )
-    samples = attribute(label="samples amount", dtype="int", doc="in analog mode only")
+    samples = attribute(
+        label="samples amount",
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        doc="in analog mode only",
+    )
     settings = attribute(
         label="gain settings",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
         label="zmq ip address",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="ip to listen to zmq data streamed out from receiver or intermediate process",
     )
     zmqport = attribute(
-        label="zmq port", dtype="str", doc="port number to listen to zmq data"
+        label="zmq port",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        doc="port number to listen to zmq data",
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
         label="discard policy",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
     )  # converted from enums
     rx_missingpackets = attribute(
@@ -88,11 +109,15 @@ class MoenchDetector(Device):
         doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
-        label="receiver hostname", dtype="str", doc="receiver hostname or IP address"
+        label="receiver hostname",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        doc="receiver hostname or IP address",
     )
     rx_tcpport = attribute(
         label="tcp rx_port",
         dtype="int",
+        access=AttrWriteType.READ_WRITE,
         doc="port for for client-receiver communication via TCP",
     )
     rx_status = attribute(
@@ -101,6 +126,7 @@ class MoenchDetector(Device):
     rx_zmqstream = attribute(
         label="data streaming via zmq",
         dtype="bool",
+        access=AttrWriteType.READ_WRITE,
         doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
     rx_version = attribute(
