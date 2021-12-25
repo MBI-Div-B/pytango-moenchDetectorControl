@@ -1,10 +1,13 @@
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
-from slsdet import Moench, runStatus, timingMode
+from slsdet import Moench, runStatus, timingMode, detectorSettings
+from _slsdet import IpAddr
 import subprocess
 import time
 import os
+import re
 import signal
+from pathlib import PosixPath
 
 
 class MoenchDetector(Device):
@@ -200,58 +203,78 @@ class MoenchDetector(Device):
         self.device.filename = value
 
     def read_filepath(self):
-        pass
+        return str(self.device.fpath)
 
     def write_filepath(self, value):
-        pass
+        try:
+            self.device.fpath = PosixPath(value)
+        except TypeError:
+            self.error_stream("not valid filepath")
 
     def read_frames(self):
-        pass
+        return self.device.frames
 
     def write_frames(self, value):
-        pass
+        self.device.frames = value
 
     def read_filewrite(self):
-        pass
+        return self.device.fwrite
 
     def write_filewrite(self, value):
-        pass
+        self.device.fwrite = value
 
     def read_highvoltage(self):
-        pass
+        return self.device.highvoltage
 
     def write_highvoltage(self, value):
-        pass
+        try:
+            self.device.highvoltage = value
+        except RuntimeError:
+            self.error_stream("not allowed highvoltage")
 
     def read_period(self):
-        pass
+        return self.device.period
 
     def write_period(self, value):
-        pass
+        self.device.period = value
 
     def read_samples(self):
-        pass
+        return self.device.samples
 
     def write_samples(self, value):
-        pass
+        self.device.samples = value
 
     def read_settings(self):
-        pass
+        return str(self.device.settings)
 
     def write_settings(self, value):
-        pass
+        settings_dict = {
+            "G1_HIGHGAIN": 13,
+            "G1_LOWGAIN": 14,
+            "G2_HIGHCAP_HIGHGAIN": 15,
+            "G2_HIGHCAP_LOWGAIN": 16,
+            "G2_LOWCAP_HIGHGAIN": 17,
+            "G2_LOWCAP_LOWGAIN": 18,
+            "G4_HIGHGAIN": 19,
+            "G4_LOWGAIN": 20,
+        }
+        if value in list(settings_dict.keys()):
+            self.device.settings = detectorSettings(settings_dict[value])
 
     def read_zmqip(self):
-        pass
+        return str(self.device.rx_zmqip)
 
     def write_zmqip(self, value):
-        pass
+        if bool(re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", value)):
+            self.device.rx_zmqip = IpAddr(value)
+        else:
+            self.error_stream("not valid ip address")
 
     def read_zmqport(self):
-        pass
+        return self.device.rx_zmqport
 
     def write_zmqport(self, value):
-        pass
+        self.device.rx_zmqport = value
 
     def read_rx_discardpolicy(self):
         pass
