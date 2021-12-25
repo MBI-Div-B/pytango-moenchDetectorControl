@@ -4,7 +4,7 @@ from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscard
 from _slsdet import IpAddr
 import subprocess
 import time
-import os
+import os, socket
 import re
 import signal
 from pathlib import PosixPath
@@ -144,13 +144,33 @@ class MoenchDetector(Device):
     )
 
     def init_pc(self):
-        SLS_RECEIVER_PORT = "1954"
-        PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
-        PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
-        PROCESSING_CORES = "20"
-        CONFIG_PATH = (
-            "/home/moench/detector/moench_2021_virtual.config"  # for virtual detector
-        )
+        if socket.gethostname() == "lrlunin-VirtualBox":
+            SLS_RECEIVER_PORT = "1954"
+            PROCESSING_RX_IP_PORT = "127.0.0.1 50003"
+            PROCESSING_TX_IP_PORT = "127.0.0.1 50001"
+            PROCESSING_CORES = "8"
+
+            CONFIG_PATH = (
+                "/home/lrlunin/moench_2021_virtual.config"  # for virtual detector
+            )
+            self.start_virtual_detector = subprocess.Popen(
+                "exec moenchDetectorServer_virtual",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.info_stream("Configured for virtual machine")
+
+        else:
+            SLS_RECEIVER_PORT = "1954"
+            PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
+            PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
+            PROCESSING_CORES = "20"
+            CONFIG_PATH = (
+                "/home/moench/detector/moench_2021.config"  # for virtual detector
+            )
+            self.info_stream("Configred for real detector")
+
         # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
         # configured for moench pc only
         self.slsDetectorProc = subprocess.Popen(
@@ -170,7 +190,9 @@ class MoenchDetector(Device):
             preexec_fn=os.setsid,
         )
         self.put_config = subprocess.Popen(
-            "exec sls_detector_put config {}".format(CONFIG_PATH),
+            "exec sls_detector_put config {path} & exec sls_detector_put config {path}".format(
+                path=CONFIG_PATH
+            ),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -373,6 +395,9 @@ class MoenchDetector(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+        if socket.gethostname() == "lrlunin-VirtualBox":
+            self.start_virtual_detector.kill()
+            self.info_stream("Killed virtual detector instance")
 
     @command
     def start(self):
