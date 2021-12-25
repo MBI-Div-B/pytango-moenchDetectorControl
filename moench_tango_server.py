@@ -1,6 +1,6 @@
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
-from slsdet import Moench, runStatus, timingMode, detectorSettings
+from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
 import subprocess
 import time
@@ -84,6 +84,7 @@ class MoenchDetector(Device):
     rx_missingpackets = attribute(
         label="missed packets",
         dtype="int",
+        access=AttrWriteType.READ,
         doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
@@ -94,7 +95,9 @@ class MoenchDetector(Device):
         dtype="int",
         doc="port for for client-receiver communication via TCP",
     )
-    rx_status = attribute(label="receiver status", dtype="str")
+    rx_status = attribute(
+        label="receiver status", dtype="str", access=AttrWriteType.READ
+    )
     rx_zmqstream = attribute(
         label="data streaming via zmq",
         dtype="bool",
@@ -103,11 +106,15 @@ class MoenchDetector(Device):
     rx_version = attribute(
         label="rec. version",
         dtype="str",
+        access=AttrWriteType.READ,
         doc="version of receiver formatatted as [0xYYMMDD]",
     )
 
     firmware_version = attribute(
-        label="det. version", dtype="str", doc="version of detector software"
+        label="det. version",
+        dtype="str",
+        access=AttrWriteType.READ,
+        doc="version of detector software",
     )
 
     def init_pc(self):
@@ -277,49 +284,55 @@ class MoenchDetector(Device):
         self.device.rx_zmqport = value
 
     def read_rx_discardpolicy(self):
-        pass
+        return self.device.rx_discardpolicy
 
     def write_rx_discardpolicy(self, value):
-        pass
+        disard_dict = {
+            "NO_DISCARD": 0,
+            "DISCARD_EMPTY_FRAMES": 1,
+            "DISCARD_PARTIAL_FRAMES": 2,
+        }
+        if value in list(disard_dict.keys()):
+            self.device.rx_discardpolicy = frameDiscardPolicy(disard_dict[value])
 
     def read_rx_missingpackets(self):
-        pass
+        return str(self.device.rx_missingpackets)
 
     def write_rx_missingpackets(self, value):
         pass
 
     def read_rx_hostname(self):
-        pass
+        return self.device.rx_hostname
 
     def write_rx_hostname(self, value):
-        pass
+        self.device.rx_hostname = value
 
     def read_rx_tcpport(self):
-        pass
+        return self.device.rx_tcpport
 
     def write_rx_tcpport(self, value):
-        pass
+        self.device.rx_tcpport = value
 
     def read_rx_status(self):
-        pass
+        return str(self.device.rx_status)
 
     def write_rx_status(self, value):
         pass
 
     def read_rx_zmqstream(self):
-        pass
+        return self.device.rx_zmqstream
 
     def write_rx_zmqstream(self, value):
-        pass
+        self.device.rx_zmqstream = value
 
     def read_rx_version(self):
-        pass
+        return self.device.rx_version
 
     def write_rx_version(self, value):
         pass
 
     def read_firmware_version(self):
-        pass
+        return self.device.firmwareversion
 
     def write_firmware_version(self, value):
         pass
