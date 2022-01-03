@@ -10,7 +10,7 @@ import signal
 from pathlib import PosixPath
 
 
-class MoenchDetector(Device):
+class MoenchDetectorControl(Device):
     polling = 1000
     exposure = attribute(
         label="exposure",
@@ -166,9 +166,7 @@ class MoenchDetector(Device):
             PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
             PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
             PROCESSING_CORES = "20"
-            CONFIG_PATH = (
-                "/home/moench/detector/moench_2021.config"  # for virtual detector
-            )
+            CONFIG_PATH = "/home/moench/detector/moench_2021.config"  # for real (hardware) detector
             self.info_stream("Configred for real detector")
 
         # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
@@ -413,4 +411,4 @@ class MoenchDetector(Device):
 
 
 if __name__ == "__main__":
-    MoenchDetector.run_server()
+    MoenchDetectorControl.run_server()
