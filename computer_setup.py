@@ -1,4 +1,4 @@
-def init_pc(tango_device, virtual=False):
+def init_pc(virtual=False):
     SLS_RECEIVER_PORT = "1954"
     PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
     PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
