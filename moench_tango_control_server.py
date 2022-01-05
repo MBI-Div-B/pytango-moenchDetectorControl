@@ -4,9 +4,10 @@ from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscard
 from _slsdet import IpAddr
 import subprocess
 import time
-import os, socket
+import os, socket, sys
 import re
 import signal
+from computer_setup import init_pc
 from pathlib import PosixPath
 
 
@@ -203,7 +204,7 @@ class MoenchDetectorControl(Device):
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
-        if not self.init_pc():
+        if not init_pc(virtual=("--virtual" in sys.argv)):
             self.set_state(DevState.FAULT)
             self.info_stream(
                 "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
