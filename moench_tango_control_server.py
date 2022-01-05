@@ -4,13 +4,14 @@ from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscard
 from _slsdet import IpAddr
 import subprocess
 import time
-import os
+import os, socket, sys
 import re
 import signal
+from computer_setup import init_pc
 from pathlib import PosixPath
 
 
-class MoenchDetector(Device):
+class MoenchDetectorControl(Device):
     polling = 1000
     exposure = attribute(
         label="exposure",
@@ -34,11 +35,15 @@ class MoenchDetector(Device):
         doc="AUTO - internal trigger, EXT - external]",
     )  # see property timing in pydetector docs
     triggers = attribute(
-        label="triggers", dtype="int", doc="number of triggers for an acquire session"
+        label="triggers",
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        doc="number of triggers for an acquire session",
     )
     filename = attribute(
         label="filename",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     filepath = attribute(
@@ -47,6 +52,7 @@ class MoenchDetector(Device):
     frames = attribute(
         label="number of frames",
         dtype="int",
+        access=AttrWriteType.READ_WRITE,
         doc="amount of frames made per acquisition",
     )
     filewrite = attribute(label="enable or disable file writing", dtype="bool")
@@ -58,27 +64,43 @@ class MoenchDetector(Device):
         max_value=200,
         min_warning=70,
         max_warning=170,
+        access=AttrWriteType.READ_WRITE,
     )
     period = attribute(
-        label="period", unit="s", dtype="float", doc="period between acquisitions"
+        label="period",
+        unit="s",
+        dtype="float",
+        access=AttrWriteType.READ_WRITE,
+        doc="period between acquisitions",
     )
-    samples = attribute(label="samples amount", dtype="int", doc="in analog mode only")
+    samples = attribute(
+        label="samples amount",
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        doc="in analog mode only",
+    )
     settings = attribute(
         label="gain settings",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
         label="zmq ip address",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="ip to listen to zmq data streamed out from receiver or intermediate process",
     )
     zmqport = attribute(
-        label="zmq port", dtype="str", doc="port number to listen to zmq data"
+        label="zmq port",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        doc="port number to listen to zmq data",
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
         label="discard policy",
         dtype="str",
+        access=AttrWriteType.READ_WRITE,
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
     )  # converted from enums
     rx_missingpackets = attribute(
@@ -88,11 +110,15 @@ class MoenchDetector(Device):
         doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
-        label="receiver hostname", dtype="str", doc="receiver hostname or IP address"
+        label="receiver hostname",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        doc="receiver hostname or IP address",
     )
     rx_tcpport = attribute(
         label="tcp rx_port",
         dtype="int",
+        access=AttrWriteType.READ_WRITE,
         doc="port for for client-receiver communication via TCP",
     )
     rx_status = attribute(
@@ -101,6 +127,7 @@ class MoenchDetector(Device):
     rx_zmqstream = attribute(
         label="data streaming via zmq",
         dtype="bool",
+        access=AttrWriteType.READ_WRITE,
         doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
     rx_version = attribute(
@@ -118,13 +145,31 @@ class MoenchDetector(Device):
     )
 
     def init_pc(self):
-        SLS_RECEIVER_PORT = "1954"
-        PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
-        PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
-        PROCESSING_CORES = "20"
-        CONFIG_PATH = (
-            "/home/moench/detector/moench_2021_virtual.config"  # for virtual detector
-        )
+        if socket.gethostname() == "lrlunin-VirtualBox":
+            SLS_RECEIVER_PORT = "1954"
+            PROCESSING_RX_IP_PORT = "127.0.0.1 50003"
+            PROCESSING_TX_IP_PORT = "127.0.0.1 50001"
+            PROCESSING_CORES = "8"
+
+            CONFIG_PATH = (
+                "/home/lrlunin/moench_2021_virtual.config"  # for virtual detector
+            )
+            self.start_virtual_detector = subprocess.Popen(
+                "exec moenchDetectorServer_virtual",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.info_stream("Configured for virtual machine")
+
+        else:
+            SLS_RECEIVER_PORT = "1954"
+            PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
+            PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
+            PROCESSING_CORES = "20"
+            CONFIG_PATH = "/home/moench/detector/moench_2021.config"  # for real (hardware) detector
+            self.info_stream("Configred for real detector")
+
         # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
         # configured for moench pc only
         self.slsDetectorProc = subprocess.Popen(
@@ -144,7 +189,9 @@ class MoenchDetector(Device):
             preexec_fn=os.setsid,
         )
         self.put_config = subprocess.Popen(
-            "exec sls_detector_put config {}".format(CONFIG_PATH),
+            "exec sls_detector_put config {path} & exec sls_detector_put config {path}".format(
+                path=CONFIG_PATH
+            ),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -157,7 +204,7 @@ class MoenchDetector(Device):
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
-        if not self.init_pc():
+        if not init_pc(virtual=("--virtual" in sys.argv)):
             self.set_state(DevState.FAULT)
             self.info_stream(
                 "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
@@ -347,6 +394,9 @@ class MoenchDetector(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+        if socket.gethostname() == "lrlunin-VirtualBox":
+            self.start_virtual_detector.kill()
+            self.info_stream("Killed virtual detector instance")
 
     @command
     def start(self):
@@ -362,4 +412,4 @@ class MoenchDetector(Device):
 
 
 if __name__ == "__main__":
-    MoenchDetector.run_server()
+    MoenchDetectorControl.run_server()
