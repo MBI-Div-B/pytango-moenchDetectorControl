@@ -146,14 +146,14 @@ class MoenchDetectorControl(Device):
 
     def init_device(self):
         self.pc_util = ComputerSetup()
+        self.VIRTUAL = True if "--virtual" in sys.argv else False
         Device.init_device(self)
         self.set_state(DevState.INIT)
-        if not self.pc_util.init_pc(virtual=("--virtual" in sys.argv)):
+        if not self.pc_util.init_pc(virtual=self.VIRTUAL):
             self.set_state(DevState.FAULT)
             self.info_stream(
                 "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
             )
-        time.sleep(1)
         self.device = Moench()
         try:
             st = self.device.status
@@ -161,7 +161,7 @@ class MoenchDetectorControl(Device):
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
             self.info_stream("Unable to establish connection with detector\n%s" % e)
-            self.delete_device(virtual=("--virtual" in sys.argv))
+            self.delete_device()
 
     def read_exposure(self):
         return self.device.exptime
@@ -329,9 +329,9 @@ class MoenchDetectorControl(Device):
         pass
 
     @command
-    def delete_device(self, virtual):
+    def delete_device(self):
         try:
-            self.pc_util.deactivate_pc(virtual)
+            self.pc_util.deactivate_pc(self.VIRTUAL)
             self.info_stream("SlsReceiver or zmq socket processes were killed.")
         except Exception:
             self.info_stream(
