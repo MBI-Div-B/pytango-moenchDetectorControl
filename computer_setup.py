@@ -8,12 +8,12 @@ from pathlib import PosixPath
 
 def init_pc(virtual=False):
     SLS_RECEIVER_PORT = "1954"
-    PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
-    PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
+    PROCESSING_RX_IP_PORT = "192.168.3.200 50003"
+    PROCESSING_TX_IP_PORT = "192.168.1.118 50001"
     PROCESSING_CORES = "20"
 
     if virtual:
-        CONFIG_PATH = "/home/lrlunin/moench_2021_virtual.config"  # for virtual detector
+        CONFIG_PATH = "/home/moench/detector/moench_2021_virtual.config"  # for virtual detector
         start_virtual_detector = subprocess.Popen(
             "exec moenchDetectorServer_virtual",
             shell=True,
