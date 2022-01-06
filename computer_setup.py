@@ -61,6 +61,7 @@ class ComputerSetup:
         self.zmqDataProc.kill()
         if virtual:
             self.start_virtual_detector.kill()
+            self.kill_processes_by_name("moenchDetectorServer_virtual")
 
     def is_sls_running(self):
         pass
@@ -78,8 +79,13 @@ class ComputerSetup:
             return False
 
     def is_process_running(self, name):
+        pass
+
+    def kill_processes_by_name(self, name):
         try:
-            for line in os.popen("ps ax| grep %s" % name):
+            for line in os.popen("ps ax | grep %s" % name):
                 fields = line.split()
+                pid = int(fields[0])
+                os.kill(pid, signal.SIGKILL)
         except:
             print("Error occurred")
