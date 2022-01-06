@@ -7,7 +7,7 @@ import time
 import os, socket, sys
 import re
 import signal
-from computer_setup import init_pc
+from computer_setup import ComputerSetup
 from pathlib import PosixPath
 
 
@@ -144,67 +144,11 @@ class MoenchDetectorControl(Device):
         doc="version of detector software",
     )
 
-    def init_pc(self):
-        if socket.gethostname() == "lrlunin-VirtualBox":
-            SLS_RECEIVER_PORT = "1954"
-            PROCESSING_RX_IP_PORT = "127.0.0.1 50003"
-            PROCESSING_TX_IP_PORT = "127.0.0.1 50001"
-            PROCESSING_CORES = "8"
-
-            CONFIG_PATH = (
-                "/home/lrlunin/moench_2021_virtual.config"  # for virtual detector
-            )
-            self.start_virtual_detector = subprocess.Popen(
-                "exec moenchDetectorServer_virtual",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            self.info_stream("Configured for virtual machine")
-
-        else:
-            SLS_RECEIVER_PORT = "1954"
-            PROCESSING_RX_IP_PORT = "192.168.2.200 50003"
-            PROCESSING_TX_IP_PORT = "192.168.1.200 50001"
-            PROCESSING_CORES = "20"
-            CONFIG_PATH = "/home/moench/detector/moench_2021.config"  # for real (hardware) detector
-            self.info_stream("Configred for real detector")
-
-        # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
-        # configured for moench pc only
-        self.slsDetectorProc = subprocess.Popen(
-            "exec slsReceiver -t {}".format(SLS_RECEIVER_PORT),
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            preexec_fn=os.setsid,
-        )
-        self.zmqDataProc = subprocess.Popen(
-            "exec moench04ZmqProcess {} {} {}".format(
-                PROCESSING_RX_IP_PORT, PROCESSING_TX_IP_PORT, PROCESSING_CORES
-            ),
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            preexec_fn=os.setsid,
-        )
-        self.put_config = subprocess.Popen(
-            "exec sls_detector_put config {path} & exec sls_detector_put config {path}".format(
-                path=CONFIG_PATH
-            ),
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        sls_running = self.slsDetectorProc.poll() == None
-        zmq_running = self.zmqDataProc.poll() == None
-        self.info_stream("Both processses are running")
-        return sls_running & zmq_running
-
     def init_device(self):
+        self.pc_util = ComputerSetup()
         Device.init_device(self)
         self.set_state(DevState.INIT)
-        if not init_pc(virtual=("--virtual" in sys.argv)):
+        if not self.pc_util.init_pc(virtual=("--virtual" in sys.argv)):
             self.set_state(DevState.FAULT)
             self.info_stream(
                 "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
@@ -217,7 +161,7 @@ class MoenchDetectorControl(Device):
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
             self.info_stream("Unable to establish connection with detector\n%s" % e)
-            self.delete_device()
+            self.delete_device(virtual=("--virtual" in sys.argv))
 
     def read_exposure(self):
         return self.device.exptime
@@ -385,18 +329,14 @@ class MoenchDetectorControl(Device):
         pass
 
     @command
-    def delete_device(self):
+    def delete_device(self, virtual):
         try:
-            self.slsDetectorProc.kill()
-            self.zmqDataProc.kill()
+            self.pc_util.deactivate_pc(virtual)
             self.info_stream("SlsReceiver or zmq socket processes were killed.")
         except Exception:
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
-        if socket.gethostname() == "lrlunin-VirtualBox":
-            self.start_virtual_detector.kill()
-            self.info_stream("Killed virtual detector instance")
 
     @command
     def start(self):
