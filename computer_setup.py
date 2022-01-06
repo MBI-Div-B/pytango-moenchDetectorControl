@@ -20,6 +20,7 @@ class ComputerSetup:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
+            time.sleep(5)
             print("configured for virtual detector")
 
         else:
@@ -51,6 +52,7 @@ class ComputerSetup:
         )
         self.sls_running = self.slsDetectorProc.poll() == None
         self.zmq_running = self.zmqDataProc.poll() == None
+        time.sleep(5)
         print("Both processses are running")
         return self.sls_running & self.zmq_running
 
