@@ -64,28 +64,31 @@ class ComputerSetup:
             self.kill_processes_by_name("moenchDetectorServer_virtual")
 
     def is_sls_running(self):
-        pass
+        return self.is_process_running("slsReceiver")
+
+    def is_zmq_running(self):
+        return self.is_process_running("moench04ZmqProcess")
 
     def is_pc_ready(self):
-        if True:
-            return True
-        else:
-            return False
-
-    def is_detector_available(self):
-        if True:
+        if self.is_sls_running() and self.is_zmq_running():
             return True
         else:
             return False
 
     def is_process_running(self, name):
-        pass
+        try:
+            lines = os.popen("pgrep -f %s" % name)
+            if not list(lines):
+                return False
+            else:
+                return True
+        except:
+            print("Error occured while process running check")
 
     def kill_processes_by_name(self, name):
         try:
-            for line in os.popen("ps ax | grep %s" % name):
-                fields = line.split()
-                pid = int(fields[0])
+            for line in os.popen("pgrep -f %s" % name):
+                pid = int(line)
                 os.kill(pid, signal.SIGKILL)
         except:
-            print("Error occurred")
+            print("Error occurred while killing process")
