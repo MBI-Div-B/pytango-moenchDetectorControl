@@ -83,7 +83,7 @@ class ComputerSetup:
             else:
                 return True
         except:
-            print("Error occured while process running check")
+            print("Error occurred while process running check")
 
     def kill_processes_by_name(self, name):
         try:
