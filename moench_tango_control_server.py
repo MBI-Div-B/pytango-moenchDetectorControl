@@ -202,10 +202,10 @@ class MoenchDetectorControl(Device):
         self.device.triggers = value
 
     def read_filename(self):
-        return self.device.filename
+        return self.device.fname
 
     def write_filename(self, value):
-        self.device.filename = value
+        self.device.fname = value
 
     def read_filepath(self):
         return str(self.device.fpath)

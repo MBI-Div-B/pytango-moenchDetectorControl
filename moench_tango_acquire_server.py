@@ -91,8 +91,9 @@ class MoenchDetectorAcquire(Device):
 
     @command
     def safe_acquire(self):
-        p = Process(target=self.manual_acquire)
-        p.start()
+        if self.device.status == runStatus.IDLE:
+            p = Process(target=self.manual_acquire)
+            p.start()
 
     def manual_acquire(self):
         self.device.rx_zmqstream = True
