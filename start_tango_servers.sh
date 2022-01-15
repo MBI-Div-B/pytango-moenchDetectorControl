@@ -7,10 +7,10 @@ then
 else
   if [[ $* == *--virtual* ]]
   then
-    ech ">>>> Starting virtual"
-    python3 moench_tango_control_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control --virtual
+    echo ">>>> Starting virtual"
+    gnome-terminal -- /bin/sh -c "python3 moench_tango_control_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control --virtual"
     sleep 6
-    python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire
+    gnome-terminal -- /bin/sh -c "python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire"
     echo ">>>> Virtual MOENCH tango server enviroment started"
   else
   echo ">>>> Starting real"
