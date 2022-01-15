@@ -54,6 +54,15 @@ class ComputerSetup:
         self.zmq_running = self.zmqDataProc.poll() == None
         time.sleep(5)
         print("Both processses are running")
+        if virtual:
+            put_config = subprocess.Popen(
+                "exec sls_detector_put config {path}".format(path=CONFIG_PATH),
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            print("Uploaded the config the 2nd time for virtual")
+        print("Both processses are running")
         return self.sls_running & self.zmq_running
 
     def deactivate_pc(self, virtual=False):

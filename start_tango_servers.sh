@@ -12,6 +12,9 @@ else
     sleep 6
     gnome-terminal -- /bin/sh -c "python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire"
     echo ">>>> Virtual MOENCH tango server enviroment started"
+    echo "connect via:"
+    echo "c = Device(\"localhost:1234/moench/virtual/control#dbase=no\")"
+    echo "a = Device(\"localhost:1235/moench/virtual/acquire#dbase=no\")"
   else
   echo ">>>> Starting real"
   #TODO: need to be configured with proper ip adresses and device names from the tango-DB
