@@ -64,7 +64,8 @@ class ZmqReceiver:
 
 class MoenchDetectorAcquire(Device):
     def init_device(self):
-        if ComputerSetup.is_pc_ready():
+        self.pc_util = ComputerSetup()
+        if self.pc_util.is_pc_ready():
             self.device = Moench()
             try:
                 st = self.device.status
