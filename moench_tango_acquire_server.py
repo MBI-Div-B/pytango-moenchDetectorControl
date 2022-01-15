@@ -4,6 +4,7 @@ from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscard
 from _slsdet import IpAddr
 import subprocess
 import time
+from multiprocessing import Process
 import os, socket
 import re
 import signal
@@ -84,7 +85,11 @@ class MoenchDetectorAcquire(Device):
     def acquire(self):
         self.device.rx_zmqstream = True
         self.device.rx_zmqfreq = 1
-        self.device.acquire()
+        p = Process(target=self.device.acquire)
+        p.start()
+
+    @command
+    def get_frame(self):
         image, header = self.zmq_receiver.get_frame()
         print(f"Image with dimensions {image.shape}")
         print(np.matrix(image))
