@@ -13,14 +13,17 @@ This device connects to MOENCH detector and allows to control the state of the d
 * `slsDetectorGroup binary executables`
 
 ## Start
-
-### locally
+### using the shell script
+1. Start the both servers (control and acquire) via shell script:  
+`sh start_tango_servers.sh [ /--help/--virtual]`
+### manually
+#### locally
 Start server via command:
 * `python moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1`
 and then connect from itango:
 * `localhost:1234/id1/tests/dev1#dbase=no`
 
-### production
+#### production
 
 to be done...
 
