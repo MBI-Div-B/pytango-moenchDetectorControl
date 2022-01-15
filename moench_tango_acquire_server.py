@@ -27,7 +27,7 @@ class ZmqReceiver:
     def init_receiver(self):
         pass
 
-    def get_dtype(dr):
+    def get_dtype(self, dr):
         if isinstance(dr, str):
             dr = int(dr)
         if dr == 32:
