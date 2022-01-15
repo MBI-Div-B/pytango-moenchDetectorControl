@@ -55,7 +55,12 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         doc="amount of frames made per acquisition",
     )
-    filewrite = attribute(label="enable or disable file writing", dtype="bool")
+    filewrite = attribute(
+        label="enable or disable file writing",
+        dtype="bool",
+        access=AttrWriteType.READ_WRITE,
+        doc="turn of/off writing file to disk",
+    )
     highvoltage = attribute(
         label="high voltage on sensor",
         dtype="int",

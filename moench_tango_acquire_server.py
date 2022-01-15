@@ -78,8 +78,9 @@ class MoenchDetectorAcquire(Device):
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
 
+    @command
     def delete_device(self):
-        pass
+        self.zmq_receiver.delete_receiver()
 
     @command
     def acquire(self):
@@ -89,10 +90,28 @@ class MoenchDetectorAcquire(Device):
         p.start()
 
     @command
+    def safe_acquire(self):
+        p = Process(target=self.manual_acquire)
+        p.start()
+
+    def manual_acquire(self):
+        self.device.rx_zmqstream = True
+        self.device.rx_zmqfreq = 1
+        self.device.startDetector()
+        self.device.startReceiver()
+        t_exp = self.device.exptime
+        n_frames = self.device.frames
+        time.sleep(t_exp * n_frames)
+        while self.device.status != runStatus.IDLE:
+            time.sleep(0.1)
+        self.device.stopReceiver()
+        self.device.rx_zmqstream = False
+
+    @command
     def get_frame(self):
         image, header = self.zmq_receiver.get_frame()
-        print(f"Image with dimensions {image.shape}")
-        print(np.matrix(image))
+        self.info_stream(f"Image with dimensions {image.shape}")
+        self.info_stream(np.matrix(image))
 
 
 if __name__ == "__main__":
