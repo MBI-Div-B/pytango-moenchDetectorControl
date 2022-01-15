@@ -146,7 +146,9 @@ class MoenchDetectorControl(Device):
 
     def init_device(self):
         self.pc_util = ComputerSetup()
-        self.VIRTUAL = True if "--virtual" in sys.argv else False # check whether server started with "--virtual" flag
+        self.VIRTUAL = (
+            True if "--virtual" in sys.argv else False
+        )  # check whether server started with "--virtual" flag
         Device.init_device(self)
         self.set_state(DevState.INIT)
         if not self.pc_util.init_pc(virtual=self.VIRTUAL):
