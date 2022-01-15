@@ -7,8 +7,13 @@ then
 else
   if [[ $* == *--virtual* ]]
   then
-    python3 moench_tango_control_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control --virtual && python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire && echo ">>>> Virtual MOENCH tango server enviroment started"
+    ech ">>>> Starting virtual"
+    python3 moench_tango_control_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control --virtual
+    sleep 6
+    python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire
+    echo ">>>> Virtual MOENCH tango server enviroment started"
   else
+  echo ">>>> Starting real"
   #TODO: need to be configured with proper ip adresses and device names from the tango-DB
   #python3 moench_tango_control_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control && python3 moench_tango_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire
   echo ">>>> Real MOENCH tango server enviroment started"
