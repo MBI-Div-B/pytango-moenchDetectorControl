@@ -26,18 +26,40 @@ class ZmqReceiver:
     def init_receiver(self):
         pass
 
+    def get_dtype(dr):
+        if isinstance(dr, str):
+            dr = int(dr)
+        if dr == 32:
+            return np.uint32
+        elif dr == 16:
+            return np.uint16
+        elif dr == 8:
+            return np.uint8
+        elif dr == 4:
+            return np.uint8
+        else:
+            raise TypeError(f"Bit depth: {dr} is not supported")
+
     def get_frame(self):
         # Read one frame from the receiver zmq stream, can be extended
         # to multi frames
         header = json.loads(self.socket.recv())
         msg = self.socket.recv(copy=False)
-        view = np.frombuffer(msg.buffer, dtype=get_dtype(header["bitmode"])).reshape(
-            header["shape"]
-        )
+        view = np.frombuffer(
+            msg.buffer, dtype=self.get_dtype(header["bitmode"])
+        ).reshape(header["shape"])
         return view.copy(), header
 
     def get_all_frames(self):
         pass
+
+    def delete_receiver(self):
+        try:
+            self.context.destroy()
+        except:
+            print("Unable to destroy zmq context")
+        if self.context.closed:
+            print("Successfully closed zmq socket")
 
 
 class MoenchDetectorAcquire(Device):
@@ -46,16 +68,25 @@ class MoenchDetectorAcquire(Device):
             self.device = Moench()
             try:
                 st = self.device.status
-                self.zmq_receiver = ZmqReceiver(
-                    self.device.rx_zmqip.str(), self.device.rx_zmqport
-                )
                 self.info_stream("Current device status %s" % st)
             except RuntimeError as e:
                 self.info_stream("Unable to establish connection with detector\n%s" % e)
                 self.delete_device()
+            self.zmq_receiver = ZmqReceiver(
+                self.device.rx_zmqip, self.device.rx_zmqport
+            )
 
     def delete_device(self):
         pass
+
+    @command
+    def acquire(self):
+        self.device.rx_zmqstream = True
+        self.device.rx_zmqfreq = 1
+        self.device.acquire()
+        image, header = self.zmq_receiver.get_frame()
+        print(f"Image with dimensions {image.shape}")
+        print(np.matrix(image))
 
 
 if __name__ == "__main__":
