@@ -56,8 +56,7 @@ class ComputerSetup:
         self.slsDetectorProc.kill()
         self.zmqDataProc.kill()
         if virtual:
-            self.start_virtual_detector.kill()
-            self.kill_processes_by_name("moenchDetectorServer_virtual")
+            kill_processes_by_name("moenchDetectorServer_virtual")
 
 
 def is_sls_running():

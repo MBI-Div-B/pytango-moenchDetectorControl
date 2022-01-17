@@ -67,10 +67,12 @@ class ZmqReceiver:
 class MoenchDetectorAcquire(Device):
     def init_device(self):
         MAX_ATTEMPTS = 5
-        attempts_counter = 0
-        while not computer_setup.is_pc_ready() and attempts_counter < MAX_ATTEMPTS:
+        self.attempts_counter = 0
+        self.zmq_receiver = None
+        while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
-            attempts_counter += 1
+            self.attempts_counter += 1
+            self.info_stream("Waiting for PC...")
         if computer_setup.is_pc_ready():
             self.device = Moench()
             try:
@@ -88,7 +90,8 @@ class MoenchDetectorAcquire(Device):
 
     @command
     def delete_device(self):
-        self.zmq_receiver.delete_receiver()
+        if self.zmq_receiver != None:
+            self.zmq_receiver.delete_receiver()
 
     @command
     def acquire(self):
