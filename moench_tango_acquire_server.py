@@ -44,7 +44,7 @@ class ZmqReceiver:
         # to multi frames
         try:
             header = json.loads(self.socket.recv(flags=zmq.NOBLOCK))
-            msg = self.socket.recv(copy=False)
+            msg = self.socket.recv(copy=False, flags=zmq.NOBLOCK)
             view = np.frombuffer(
                 msg.buffer, dtype=self.get_dtype(header["bitmode"])
             ).reshape(header["shape"])
@@ -142,7 +142,7 @@ class MoenchDetectorAcquire(Device):
             self.info_stream("No acquired capture in the zmq queue")
         else:
             self.info_stream(f"Image with dimensions {image.shape}")
-            self.info_stream(image)
+            print(image)
 
 
 if __name__ == "__main__":
