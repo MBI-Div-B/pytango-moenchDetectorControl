@@ -1,3 +1,4 @@
+from tkinter.tix import MAX
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -10,11 +11,12 @@ import re
 import signal
 import zmq, json
 import numpy as np
-from computer_setup import ComputerSetup
+import computer_setup
 
 
 class ZmqReceiver:
     def __init__(self, ip, port):
+        # need to be initialized only in case if the zmq server is up
         port = port
         ip = ip
         self.context = zmq.Context()
@@ -23,9 +25,6 @@ class ZmqReceiver:
         print(f"Connecting to: {endpoint}")
         self.socket.connect(endpoint)
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
-
-    def init_receiver(self):
-        pass
 
     def get_dtype(self, dr):
         if isinstance(dr, str):
@@ -44,12 +43,15 @@ class ZmqReceiver:
     def get_frame(self):
         # Read one frame from the receiver zmq stream, can be extended
         # to multi frames
-        header = json.loads(self.socket.recv())
-        msg = self.socket.recv(copy=False)
-        view = np.frombuffer(
-            msg.buffer, dtype=self.get_dtype(header["bitmode"])
-        ).reshape(header["shape"])
-        return view.copy(), header
+        try:
+            header = json.loads(self.socket.recv(flags=zmq.NOBLOCK))
+            msg = self.socket.recv(copy=False)
+            view = np.frombuffer(
+                msg.buffer, dtype=self.get_dtype(header["bitmode"])
+            ).reshape(header["shape"])
+            return view.copy(), header
+        except:
+            return None, None
 
     def get_all_frames(self):
         pass
@@ -65,8 +67,12 @@ class ZmqReceiver:
 
 class MoenchDetectorAcquire(Device):
     def init_device(self):
-        self.pc_util = ComputerSetup()
-        if self.pc_util.is_pc_ready():
+        MAX_ATTEMPTS = 5
+        attempts_counter = 0
+        while not computer_setup.is_pc_ready() and attempts_counter < MAX_ATTEMPTS:
+            time.sleep(0.5)
+            attempts_counter += 1
+        if computer_setup.is_pc_ready():
             self.device = Moench()
             try:
                 st = self.device.status
@@ -77,6 +83,9 @@ class MoenchDetectorAcquire(Device):
             self.zmq_receiver = ZmqReceiver(
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
+        else:
+            self.info_stream("Control tango server is not available")
+            self.delete_device()
 
     @command
     def delete_device(self):
@@ -126,8 +135,11 @@ class MoenchDetectorAcquire(Device):
     @command
     def get_frame(self):
         image, header = self.zmq_receiver.get_frame()
-        self.info_stream(f"Image with dimensions {image.shape}")
-        self.info_stream(np.matrix(image))
+        if image == None or header == None:
+            self.info_stream("No acquired capture in the zmq queue")
+        else:
+            self.info_stream(f"Image with dimensions {image.shape}")
+            self.info_stream(np.matrix(image))
 
 
 if __name__ == "__main__":

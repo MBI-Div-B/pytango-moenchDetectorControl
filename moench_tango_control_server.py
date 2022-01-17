@@ -8,6 +8,7 @@ import os, socket, sys
 import re
 import signal
 from computer_setup import ComputerSetup
+import computer_setup
 from pathlib import PosixPath
 
 
@@ -150,17 +151,22 @@ class MoenchDetectorControl(Device):
     )
 
     def init_device(self):
+        MAX_ATTEMPTS = 5
+        self.attempts_counter = 0
         self.pc_util = ComputerSetup()
         self.VIRTUAL = (
             True if "--virtual" in sys.argv else False
         )  # check whether server started with "--virtual" flag
-        Device.init_device(self)
+        # Device.init_device(self) # is required?
         self.set_state(DevState.INIT)
-        if not self.pc_util.init_pc(virtual=self.VIRTUAL):
-            self.set_state(DevState.FAULT)
-            self.info_stream(
-                "Unable to start slsReceiver or zmq socket. Check firewall process and already running instances."
-            )
+        self.pc_util.init_pc(virtual=self.VIRTUAL)
+        while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
+            time.sleep(0.5)
+            self.attempts_counter += 1
+        if not computer_setup.is_pc_ready:
+            self.delete_device()
+            self.info_stream("Unable to start PC")
+        self.info_stream("PC is ready")
         self.device = Moench()
         try:
             st = self.device.status
