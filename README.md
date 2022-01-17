@@ -15,7 +15,7 @@ This device connects to MOENCH detector and allows to control the state of the d
 ## Start
 ### using the shell script
 1. Start the both servers (control and acquire) via shell script:  
-`sh start_tango_servers.sh [ /--help/--virtual]`
+`sh start_tango_servers.sh [ |--help| --virtual [--verbose]]`
 ### manually
 #### locally
 Start server via command:
