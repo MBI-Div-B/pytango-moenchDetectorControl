@@ -85,6 +85,7 @@ class MoenchDetectorAcquire(Device):
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
         else:
+            self.set_state(DevState.FAULT)
             self.info_stream("Control tango server is not available")
             self.delete_device()
 
@@ -141,7 +142,7 @@ class MoenchDetectorAcquire(Device):
             self.info_stream("No acquired capture in the zmq queue")
         else:
             self.info_stream(f"Image with dimensions {image.shape}")
-            self.info_stream(np.matrix(image))
+            self.info_stream(image)
 
 
 if __name__ == "__main__":
