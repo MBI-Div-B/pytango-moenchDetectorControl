@@ -1,4 +1,3 @@
-from tkinter.tix import MAX
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
