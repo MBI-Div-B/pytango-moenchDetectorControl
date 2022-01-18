@@ -151,9 +151,10 @@ class MoenchDetectorControl(Device):
     )
 
     detector_status = attribute(
-        label ="detectore status",
+        label="detectore status",
         dtype="str",
-        access=os.access.AttrWriteType.READ
+        access=AttrWriteType.READ,
+        doc="status of detector",
     )
 
     def init_device(self):
