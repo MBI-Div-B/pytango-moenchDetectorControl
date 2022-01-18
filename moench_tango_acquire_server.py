@@ -98,8 +98,6 @@ class MoenchDetectorAcquire(Device):
         self.device.rx_zmqstream = True
         self.device.rx_zmqfreq = 1
         self.device.acquire()
-        self.device.rx_zmqstream = False
-        self.device.rx_zmqfreq = 0
 
     @command
     def acquire(self):
