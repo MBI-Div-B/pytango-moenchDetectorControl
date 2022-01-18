@@ -94,46 +94,22 @@ class MoenchDetectorAcquire(Device):
         if self.zmq_receiver != None:
             self.zmq_receiver.delete_receiver()
 
+    def safe_acquire(self):
+        self.device.rx_zmqstream = True
+        self.device.rx_zmqfreq = 1
+        self.device.acquire()
+        self.device.rx_zmqstream = False
+        self.device.rx_zmqfreq = 0
+
     @command
     def acquire(self):
-        self.device.rx_zmqstream = True
-        self.device.rx_zmqfreq = 1
-        p = Process(target=self.device.acquire)
-        p.start()
-
-    @command
-    def safe_acquire(self):
         if self.device.status == runStatus.IDLE:
-            p = Process(target=self.manual_acquire)
+            p = Process(target=self.device.acquire)
             p.start()
-
-    @command
-    def safe_safe_acquire(self):
-        if self.device.status == runStatus.IDLE:
-            p = Process(target=self.acquire_and_wait)
-            p.start()
-
-    def acquire_and_wait(self):
-        self.device.rx_zmqstream = True
-        self.device.rx_zmqfreq = 1
-        p = Process(target=self.device.acquire)
-        p.start()
-        while self.device.status != runStatus.IDLE:
-            time.sleep(0.1)
-        p.kill()
-
-    def manual_acquire(self):
-        self.device.rx_zmqstream = True
-        self.device.rx_zmqfreq = 1
-        self.device.startDetector()
-        self.device.startReceiver()
-        t_exp = self.device.exptime
-        n_frames = self.device.frames
-        time.sleep(t_exp * n_frames)
-        while self.device.status != runStatus.IDLE:
-            time.sleep(0.1)
-        self.device.stopReceiver()
-        self.device.rx_zmqstream = False
+        elif self.device.status == runStatus.RUNNING:
+            self.info_stream("Detector is acquiring")
+        else:
+            self.error_stream("Unable to acquire")
 
     @command
     def get_frame(self):

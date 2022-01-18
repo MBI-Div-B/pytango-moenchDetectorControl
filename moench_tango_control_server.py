@@ -128,7 +128,7 @@ class MoenchDetectorControl(Device):
         doc="port for for client-receiver communication via TCP",
     )
     rx_status = attribute(
-        label="receiver status", dtype="str", access=AttrWriteType.READ
+        label="receiver rx/tx status", dtype="str", access=AttrWriteType.READ
     )
     rx_zmqstream = attribute(
         label="data streaming via zmq",
@@ -148,6 +148,12 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ,
         doc="version of detector software",
+    )
+
+    detector_status = attribute(
+        label ="detectore status",
+        dtype="str",
+        access=os.access.AttrWriteType.READ
     )
 
     def init_device(self):
@@ -339,6 +345,12 @@ class MoenchDetectorControl(Device):
         return self.device.firmwareversion
 
     def write_firmware_version(self, value):
+        pass
+
+    def read_detector_status(self):
+        return str(self.device.status)
+
+    def write_detector_status(self):
         pass
 
     @command
