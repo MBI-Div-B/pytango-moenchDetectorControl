@@ -16,18 +16,18 @@ else
 
   if [[ $* == *--local* ]]
   then
-  MESSAGE_1=">>>> Starting locally"
+  MESSAGE_1=">>>> Starting locally..."
   NETWORK_ARG_CONTROL="-ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control"
   NETWORK_ARG_ACQUIRE="-ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire"
-  MESSAGE_3=">>>Started locally\nconnect via:\nc = Device(\"localhost:1234/moench/virtual/control#dbase=no\")\na = Device(\"localhost:1235/moench/virtual/acquire#dbase=no\")"
+  MESSAGE_3=">>>> Started locally\nconnect via:\nc = Device(\"localhost:1234/moench/virtual/control#dbase=no\")\na = Device(\"localhost:1235/moench/virtual/acquire#dbase=no\")"
   else
-  MESSAGE_1=">>>> Starting on network"
+  MESSAGE_1=">>>> Starting on network..."
   NETWORK_ARG_CONTROL=""
   NETWORK_ARG_ACQUIRE=""
-  MESSAGE_3=">>>>Started on network\n connect via jive"
+  MESSAGE_3=">>>> Started on network\n connect via jive"
   fi
 
-  if [[ $* == *--virtual*]]
+  if [[ $* == *--virtual* ]]
   then
   MESSAGE_2=">>>> with a virtual detector"
   VIRTUAL_ARG="--virtual"
@@ -35,7 +35,7 @@ else
   MESSAGE_2=">>>> with a real detector"
   VIRTUAL_ARG=""
   fi
-  
+
   echo ${MESSAGE_1}
   echo ${MESSAGE_2}
   gnome-terminal -- /bin/sh -c "python3 moench_tango_control_server.py moench ${NETWORK_ARG_CONTROL} ${VERBOSE_ARG} ${VIRTUAL_ARG}; exec bash"

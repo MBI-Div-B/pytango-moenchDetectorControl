@@ -53,7 +53,7 @@ class MoenchDetectorControl(Device):
     )
     fileindex = attribute(
         label="file_index",
-        dtype="str",
+        dtype="int",
         access=AttrWriteType.READ_WRITE,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
@@ -106,7 +106,7 @@ class MoenchDetectorControl(Device):
     )
     zmqport = attribute(
         label="zmq port",
-        dtype="str",
+        dtype="int",
         access=AttrWriteType.READ_WRITE,
         doc="port number to listen to zmq data",
     )  # can be either a single int or list (or tuple) of ints
@@ -310,7 +310,7 @@ class MoenchDetectorControl(Device):
         self.device.rx_zmqport = value
 
     def read_rx_discardpolicy(self):
-        return self.device.rx_discardpolicy
+        return str(self.device.rx_discardpolicy)
 
     def write_rx_discardpolicy(self, value):
         disard_dict = {
