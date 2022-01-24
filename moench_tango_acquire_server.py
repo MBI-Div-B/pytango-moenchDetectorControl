@@ -66,6 +66,7 @@ class ZmqReceiver:
 
 class MoenchDetectorAcquire(Device):
     def init_device(self):
+        Device.init_device(self)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.zmq_receiver = None
@@ -76,7 +77,7 @@ class MoenchDetectorAcquire(Device):
         if computer_setup.is_pc_ready():
             self.device = Moench()
             try:
-                st = self.device.status
+                st = self.device.rx_status
                 self.info_stream(f"Current device status {st}")
             except RuntimeError as e:
                 self.info_stream(f"Unable to establish connection with detector\n{e}")

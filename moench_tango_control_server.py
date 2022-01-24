@@ -25,7 +25,6 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
-        polling_period=polling,
         doc="single frame exposure time",
     )
     timing_mode = attribute(
@@ -33,6 +32,7 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
+        hw_memorized=True,
         doc="AUTO - internal trigger, EXT - external]",
     )  # see property timing in pydetector docs
     triggers = attribute(
@@ -49,6 +49,12 @@ class MoenchDetectorControl(Device):
     )
     filepath = attribute(
         label="filepath", dtype="str", doc="dir where data files will be written"
+    )
+    fileindex = attribute(
+        label="file_index",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     frames = attribute(
         label="number of frames",
@@ -158,6 +164,7 @@ class MoenchDetectorControl(Device):
     )
 
     def init_device(self):
+        Device.init_device(self)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.pc_util = ComputerSetup()
@@ -176,7 +183,7 @@ class MoenchDetectorControl(Device):
         self.info_stream("PC is ready")
         self.device = Moench()
         try:
-            st = self.device.status
+            st = self.device.rx_status
             self.info_stream("Current device status: %s" % st)
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
@@ -188,6 +195,12 @@ class MoenchDetectorControl(Device):
 
     def write_exposure(self, value):
         self.device.exptime = value
+
+    def read_fileindex(self):
+        return self.device.findex
+
+    def write_fileindex(self, value):
+        self.device.findex = value
 
     def read_timing_mode(self):
         if self.device.timing == timingMode.AUTO_TIMING:
