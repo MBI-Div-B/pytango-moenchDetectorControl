@@ -18,6 +18,7 @@ class MoenchDetectorControl(Device):
         label="exposure",
         dtype="float",
         unit="s",
+        format=".2e",
         min_value=0.0,
         max_value=1e2,
         min_warning=1e-6,  # check the smallest exposure when packetloss occurs
@@ -185,6 +186,7 @@ class MoenchDetectorControl(Device):
         try:
             st = self.device.rx_status
             self.info_stream("Current device status: %s" % st)
+            self.set_state(DevState.ON)
         except RuntimeError as e:
             self.set_state(DevState.FAULT)
             self.info_stream("Unable to establish connection with detector\n%s" % e)

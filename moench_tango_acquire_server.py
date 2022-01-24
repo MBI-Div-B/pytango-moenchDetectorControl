@@ -67,6 +67,7 @@ class ZmqReceiver:
 class MoenchDetectorAcquire(Device):
     def init_device(self):
         Device.init_device(self)
+        self.set_state(DevState.INIT)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.zmq_receiver = None
@@ -85,6 +86,7 @@ class MoenchDetectorAcquire(Device):
             self.zmq_receiver = ZmqReceiver(
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
+            self.set_state(DevState.ON)
         else:
             self.set_state(DevState.FAULT)
             self.info_stream("Control tango server is not available")
