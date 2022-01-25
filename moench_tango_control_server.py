@@ -61,6 +61,7 @@ class MoenchDetectorControl(Device):
         label="number of frames",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
         doc="amount of frames made per acquisition",
     )
     filewrite = attribute(
@@ -156,10 +157,9 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ,
         doc="version of detector software",
     )
-
     detector_status = attribute(
         label="detectore status",
-        dtype="str",
+        dtype="DevState",
         access=AttrWriteType.READ,
         doc="status of detector",
     )
@@ -363,8 +363,39 @@ class MoenchDetectorControl(Device):
     def write_firmware_version(self, value):
         pass
 
+    # TODO: rewrite
+    # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
+    #  using DevState
+    # static DevState	ALARM
+    # static DevState	CLOSE
+    # static DevState	DISABLE
+    # static DevState	EXTRACT
+    # static DevState	FAULT
+    # static DevState	INIT
+    # static DevState	INSERT
+    # static DevState	MOVING
+    # static DevState	OFF
+    # static DevState	ON
+    # static DevState	OPEN
+    # static DevState	RUNNING
+    # static DevState	STANDBY
+    # static DevState	UNKNOWN
+
     def read_detector_status(self):
-        return str(self.device.status)
+        # TODO: check behavior and statuses' identities
+        statuses = {
+            runStatus.IDLE: DevState.ON,
+            runStatus.ERROR: DevState.FAULT,
+            runStatus.WAITING: DevState.STANDBY,
+            runStatus.RUN_FINISHED: DevState.ON,
+            runStatus.TRANSMITTING: DevState.RUNNING,
+            runStatus.STOPPED: DevState.ON,
+        }
+        det_status_devstate = statuses.get(self.device.status)
+        if det_status_devstate == None:
+            return DevState.UNKNOWN
+        else:
+            return det_status_devstate
 
     def write_detector_status(self):
         pass
@@ -378,6 +409,15 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+
+    @command
+    def get_tiff_fullpath_next(self):
+        # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
+        filename = self.read_filename()
+        file_index = self.read_fileindex()
+        savepath = self.read_filepath()
+        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
+        return fullpath
 
     @command
     def start(self):
