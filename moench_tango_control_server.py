@@ -389,7 +389,10 @@ class MoenchDetectorControl(Device):
         pass
 
     def read_tiff_fullpath_last(self):
-        self._tiff_fullpath_last
+        if self._tiff_fullpath_last is not None:
+            return self._tiff_fullpath_last
+        else:
+            return ""
 
     def write_tiff_fullpath_last(self, value):
         self._tiff_fullpath_last = value
