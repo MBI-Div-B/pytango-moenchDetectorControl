@@ -104,6 +104,7 @@ class MoenchDetectorAcquire(Device):
         device.acquire()
         tango_device.tiff_fullpath_last = current_path
 
+    # TODO: SETUP FOR TRIGGER MODE
     @command
     def acquire(self):
         if self.device.status == runStatus.IDLE:

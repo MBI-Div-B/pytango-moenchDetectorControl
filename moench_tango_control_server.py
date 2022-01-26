@@ -1,3 +1,4 @@
+from numpy import dtype
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -11,9 +12,9 @@ from computer_setup import ComputerSetup
 import computer_setup
 from pathlib import PosixPath
 
-
+# TODO: FISALLOWED TO ALL ATTRIBUTES
 class MoenchDetectorControl(Device):
-    polling = 1000
+    _tiff_fullpath_last = ""
     exposure = attribute(
         label="exposure",
         dtype="float",
@@ -21,11 +22,10 @@ class MoenchDetectorControl(Device):
         format=".2e",
         min_value=0.0,
         max_value=1e2,
-        min_warning=1e-6,  # check the smallest exposure when packetloss occurs
-        max_warning=0.7e2,  # check too long exposures
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
+        fisallowed="isWriteAvailable",
         doc="single frame exposure time",
     )
     timing_mode = attribute(
@@ -34,27 +34,34 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
+        fisallowed="isWriteAvailable",
         doc="AUTO - internal trigger, EXT - external]",
     )  # see property timing in pydetector docs
     triggers = attribute(
         label="triggers",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="number of triggers for an acquire session",
     )
     filename = attribute(
         label="filename",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     filepath = attribute(
-        label="filepath", dtype="str", doc="dir where data files will be written"
+        label="filepath",
+        dtype="str",
+        fisallowed="isWriteAvailable",
+        doc="dir where data files will be written",
     )
     fileindex = attribute(
         label="file_index",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     frames = attribute(
@@ -62,12 +69,14 @@ class MoenchDetectorControl(Device):
         dtype="int",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
+        fisallowed="isWriteAvailable",
         doc="amount of frames made per acquisition",
     )
     filewrite = attribute(
         label="enable or disable file writing",
         dtype="bool",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="turn of/off writing file to disk",
     )
     highvoltage = attribute(
@@ -76,8 +85,7 @@ class MoenchDetectorControl(Device):
         unit="V",
         min_value=60,
         max_value=200,
-        min_warning=70,
-        max_warning=170,
+        fisallowed="isWriteAvailable",
         access=AttrWriteType.READ_WRITE,
     )
     period = attribute(
@@ -85,69 +93,83 @@ class MoenchDetectorControl(Device):
         unit="s",
         dtype="float",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="period between acquisitions",
     )
     samples = attribute(
         label="samples amount",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="in analog mode only",
     )
     settings = attribute(
         label="gain settings",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
         label="zmq ip address",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="ip to listen to zmq data streamed out from receiver or intermediate process",
     )
     zmqport = attribute(
         label="zmq port",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="port number to listen to zmq data",
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
         label="discard policy",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
     )  # converted from enums
     rx_missingpackets = attribute(
         label="missed packets",
         dtype="int",
         access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
         doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
         label="receiver hostname",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="receiver hostname or IP address",
     )
     rx_tcpport = attribute(
         label="tcp rx_port",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="port for for client-receiver communication via TCP",
     )
     rx_status = attribute(
-        label="receiver rx/tx status", dtype="str", access=AttrWriteType.READ
+        label="receiver rx/tx status",
+        dtype="str",
+        access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
     )
     rx_zmqstream = attribute(
         label="data streaming via zmq",
         dtype="bool",
         access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
         doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
     rx_version = attribute(
         label="rec. version",
         dtype="str",
         access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
         doc="version of receiver formatatted as [0xYYMMDD]",
     )
 
@@ -155,27 +177,38 @@ class MoenchDetectorControl(Device):
         label="det. version",
         dtype="str",
         access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
         doc="version of detector software",
     )
     detector_status = attribute(
         label="detectore status",
         dtype="DevState",
         access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
         doc="status of detector",
     )
     tiff_fullpath_next = attribute(
         label="next capture path",
         dtype="str",
         access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
         doc="full path of the next capture",
     )
     tiff_fullpath_last = attribute(
         label="last capture path",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
-        # memorized=True,
-        # hw_memorized=True,
+        memorized=True,
+        hw_memorized=True,
+        fisallowed="isWriteAvailable",
         doc="full path of the last capture",
+    )
+    tiff_fullpath_last_formatted = attribute(
+        label="path for lavue",
+        dtype="str",
+        access=AttrWriteType.READ,
+        fisallowed="isWriteAvailable",
+        doc="full path of the last capture with file:",
     )
 
     def init_device(self):
@@ -205,6 +238,12 @@ class MoenchDetectorControl(Device):
             self.set_state(DevState.FAULT)
             self.info_stream("Unable to establish connection with detector\n%s" % e)
             self.delete_device()
+
+    def isWriteAvailable(self):
+        # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
+        if self.device.status in (runStatus.IDLE, runStatus.WAITING, runStatus.STOPPED):
+            return True
+        return False
 
     def read_exposure(self):
         return self.device.exptime
@@ -389,13 +428,16 @@ class MoenchDetectorControl(Device):
         pass
 
     def read_tiff_fullpath_last(self):
-        if self._tiff_fullpath_last is not None:
-            return "file:" + self._tiff_fullpath_last
-        else:
-            return ""
+        return self._tiff_fullpath_last
 
     def write_tiff_fullpath_last(self, value):
         self._tiff_fullpath_last = value
+
+    def read_tiff_fullpath_last_formatted(self):
+        return "file:" + self._tiff_fullpath_last
+
+    def write_tiff_fullpath_last_formatted(self, value):
+        pass
 
     # TODO: rewrite
     # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
