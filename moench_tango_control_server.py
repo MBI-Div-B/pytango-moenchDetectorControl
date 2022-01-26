@@ -173,8 +173,8 @@ class MoenchDetectorControl(Device):
         label="last capture path",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
+        # memorized=True,
+        # hw_memorized=True,
         doc="full path of the last capture",
     )
 
@@ -390,7 +390,7 @@ class MoenchDetectorControl(Device):
 
     def read_tiff_fullpath_last(self):
         if self._tiff_fullpath_last is not None:
-            return self._tiff_fullpath_last
+            return "file:" + self._tiff_fullpath_last
         else:
             return ""
 

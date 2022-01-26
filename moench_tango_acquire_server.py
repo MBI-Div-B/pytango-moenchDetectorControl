@@ -108,16 +108,17 @@ class MoenchDetectorAcquire(Device):
     def acquire(self):
         if self.device.status == runStatus.IDLE:
             tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
-            # p = Process(target=self.device.acquire)
-            p = Process(
-                target=self.acquire_and_write_path,
-                args=(
-                    self.device,
-                    self.tango_control_device,
-                    tiff_fullpath_current,
-                ),
-            )
+            p = Process(target=self.device.acquire)
+            # p = Process(
+            #     target=self.acquire_and_write_path,
+            #     args=(
+            #         self.device,
+            #         self.tango_control_device,
+            #         tiff_fullpath_current,
+            #     ),
+            # )
             p.start()
+            self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
         elif self.device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:
