@@ -8,6 +8,7 @@ from pathlib import PosixPath
 
 class ComputerSetup:
     def init_pc(self, virtual=False):
+        # TODO: use device/class properties in the control device and provide them here
         SLS_RECEIVER_PORT = "1954"
         PROCESSING_RX_IP = "192.168.2.200"
         PROCESSING_RX_PORT = "50003"
@@ -17,7 +18,8 @@ class ComputerSetup:
         if virtual:
             CONFIG_PATH = "/home/moench/detector/moench_2021_virtual.config"  # for virtual detector
             self.start_virtual_detector = subprocess.Popen(
-                "moenchDetectorServer_virtual", shell=False,
+                "moenchDetectorServer_virtual",
+                shell=False,
             )
             time.sleep(5)
             print("configured for virtual detector")
@@ -28,7 +30,8 @@ class ComputerSetup:
         # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
         # configured for moench pc only
         self.slsDetectorProc = subprocess.Popen(
-            ["slsReceiver", "-t", SLS_RECEIVER_PORT], preexec_fn=os.setsid,
+            ["slsReceiver", "-t", SLS_RECEIVER_PORT],
+            preexec_fn=os.setsid,
         )
         self.zmqDataProc = subprocess.Popen(
             [

@@ -163,6 +163,20 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ,
         doc="status of detector",
     )
+    tiff_fullpath_next = attribute(
+        label="next capture path",
+        dtype="str",
+        access=AttrWriteType.READ,
+        doc="full path of the next capture",
+    )
+    tiff_fullpath_last = attribute(
+        label="last capture path",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="full path of the last capture",
+    )
 
     def init_device(self):
         Device.init_device(self)
@@ -363,6 +377,23 @@ class MoenchDetectorControl(Device):
     def write_firmware_version(self, value):
         pass
 
+    def read_tiff_fullpath_next(self):
+        # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
+        filename = self.read_filename()
+        file_index = self.read_fileindex()
+        savepath = self.read_filepath()
+        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
+        return fullpath
+
+    def write_tiff_fullpath_next(self, value):
+        pass
+
+    def read_tiff_fullpath_last(self):
+        self._tiff_fullpath_last
+
+    def write_tiff_fullpath_last(self, value):
+        self._tiff_fullpath_last = value
+
     # TODO: rewrite
     # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
     #  using DevState
@@ -409,15 +440,6 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
-
-    @command
-    def get_tiff_fullpath_next(self):
-        # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
-        filename = self.read_filename()
-        file_index = self.read_fileindex()
-        savepath = self.read_filepath()
-        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
-        return fullpath
 
     @command
     def start(self):

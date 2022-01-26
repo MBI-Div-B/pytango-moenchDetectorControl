@@ -1,4 +1,4 @@
-from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
+from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute, DeviceProxy
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -71,6 +71,7 @@ class MoenchDetectorAcquire(Device):
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.zmq_receiver = None
+        # TODO: HERE CAN BE REPLACED WITH MoenchControl deviceproxy and check flag
         while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
             self.attempts_counter += 1
@@ -87,6 +88,8 @@ class MoenchDetectorAcquire(Device):
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
             self.set_state(DevState.ON)
+            # TODO: virtual flag check is necessary
+            self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
         else:
             self.set_state(DevState.FAULT)
             self.info_stream("Control tango server is not available")
@@ -97,15 +100,23 @@ class MoenchDetectorAcquire(Device):
         if self.zmq_receiver != None:
             self.zmq_receiver.delete_receiver()
 
-    def safe_acquire(self):
-        self.device.rx_zmqstream = True
-        self.device.rx_zmqfreq = 1
-        self.device.acquire()
+    def acquire_and_write_path(self, device, tango_device, current_path):
+        device.acquire()
+        tango_device.tiff_fullpath_last = current_path
 
     @command
     def acquire(self):
         if self.device.status == runStatus.IDLE:
-            p = Process(target=self.device.acquire)
+            tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
+            # p = Process(target=self.device.acquire)
+            p = Process(
+                target=self.acquire_and_write_path,
+                args=(
+                    self.device,
+                    self.tango_control_device,
+                    tiff_fullpath_current,
+                ),
+            )
             p.start()
         elif self.device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
