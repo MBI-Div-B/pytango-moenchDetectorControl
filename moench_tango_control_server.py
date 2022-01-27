@@ -184,7 +184,6 @@ class MoenchDetectorControl(Device):
         label="detectore status",
         dtype="DevState",
         access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
         doc="status of detector",
     )
     tiff_fullpath_next = attribute(
@@ -200,14 +199,12 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
-        fisallowed="isWriteAvailable",
         doc="full path of the last capture",
     )
     tiff_fullpath_last_formatted = attribute(
         label="path for lavue",
         dtype="str",
         access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
         doc="full path of the last capture with file:",
     )
 
@@ -239,7 +236,7 @@ class MoenchDetectorControl(Device):
             self.info_stream("Unable to establish connection with detector\n%s" % e)
             self.delete_device()
 
-    def isWriteAvailable(self):
+    def isWriteAvailable(self, value):
         # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
         if self.device.status in (runStatus.IDLE, runStatus.WAITING, runStatus.STOPPED):
             return True

@@ -100,10 +100,6 @@ class MoenchDetectorAcquire(Device):
         if self.zmq_receiver != None:
             self.zmq_receiver.delete_receiver()
 
-    def acquire_and_write_path(self, device, tango_device, current_path):
-        device.acquire()
-        tango_device.tiff_fullpath_last = current_path
-
     # TODO: SETUP FOR TRIGGER MODE
     @command
     def acquire(self):
