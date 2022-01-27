@@ -462,6 +462,7 @@ class MoenchDetectorControl(Device):
             runStatus.WAITING: DevState.STANDBY,
             runStatus.RUN_FINISHED: DevState.ON,
             runStatus.TRANSMITTING: DevState.RUNNING,
+            runStatus.RUNNING: DevState.RUNNING,
             runStatus.STOPPED: DevState.ON,
         }
         det_status_devstate = statuses.get(self.device.status)
