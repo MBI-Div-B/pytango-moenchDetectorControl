@@ -15,17 +15,32 @@ This device connects to MOENCH detector and allows to control the state of the d
 ## Start
 ### using the shell script
 1. Start the both servers (control and acquire) via shell script:  
-`sh start_tango_servers.sh [ |--help| --virtual [--verbose]]`
+```text
+sh start_tango_servers.sh [OPTIONS...]
+
+Options and arguments (and corresponding environment variables):
+  --virtual : use virtual detector
+  --local   : run tango servers locally without connecting to real DB
+  --verbose : use info_stream for tango servers
+```  
 ### manually
 #### locally
-Start server via command:
-* `python moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1`
-and then connect from itango:
+Start servers via command:
+* `python3 moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1 [-v4] [--virtual]`
+* `python3 moench_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist id1/tests/dev2 [-v4]`
+
+and then connect from Jive/iTango:
 * `localhost:1234/id1/tests/dev1#dbase=no`
+* `localhost:1235/id1/tests/dev2#dbase=no`
 
 #### production
+Start servers via command:
+* `python3 moench_tango_server.py moench [-v4] [--virtual]`
+* `python3 moench_acquire_server.py moench [-v4]`
 
-to be done...
+and then connect from Jive/iTango:
+* `rsxs/moenchControl/bchip286`
+* `rsxs/moenchAcquire/bchip286`
 
 ## Help
 
