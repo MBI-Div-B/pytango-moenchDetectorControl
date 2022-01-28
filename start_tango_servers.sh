@@ -1,7 +1,7 @@
 #!/bin/bash
 if [[ ($* == *--help*) || ($* == *-h*)]]
 then
-  echo "usage: start_tango_servers.sh [flags]
+  echo "Usage: sh start_tango_servers.sh [OPTIONS...]
   Options and arguments (and corresponding environment variables):
   --virtual : use virtual detector
   --local   : run tango servers locally without connecting to real DB
@@ -16,12 +16,12 @@ else
 
   if [[ $* == *--local* ]]
   then
-  MESSAGE_1=">>>> Starting locally..."
+  MESSAGE_1=">>>> Starting locally"
   NETWORK_ARG_CONTROL="-ORBendPoint giop:tcp:localhost:1234 -nodb -dlist moench/virtual/control"
   NETWORK_ARG_ACQUIRE="-ORBendPoint giop:tcp:localhost:1235 -nodb -dlist moench/virtual/acquire"
   MESSAGE_3=">>>> Started locally\nconnect via:\nc = Device(\"localhost:1234/moench/virtual/control#dbase=no\")\na = Device(\"localhost:1235/moench/virtual/acquire#dbase=no\")"
   else
-  MESSAGE_1=">>>> Starting on network..."
+  MESSAGE_1=">>>> Starting on network"
   NETWORK_ARG_CONTROL=""
   NETWORK_ARG_ACQUIRE=""
   MESSAGE_3=">>>> Started on network\n connect via jive"
@@ -29,10 +29,10 @@ else
 
   if [[ $* == *--virtual* ]]
   then
-  MESSAGE_2=">>>> with a virtual detector"
+  MESSAGE_2=">>>> with a virtual detector..."
   VIRTUAL_ARG="--virtual"
   else
-  MESSAGE_2=">>>> with a real detector"
+  MESSAGE_2=">>>> with a real detector..."
   VIRTUAL_ARG=""
   fi
 

@@ -49,6 +49,8 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
+        memorized=True,
+        hw_memorized=True,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     filepath = attribute(
@@ -129,7 +131,7 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
-        doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY/DISCARD_PARTIAL]",
+        doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
     )  # converted from enums
     rx_missingpackets = attribute(
         label="missed packets",
