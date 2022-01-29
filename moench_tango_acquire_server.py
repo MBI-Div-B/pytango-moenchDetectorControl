@@ -1,3 +1,4 @@
+import sys
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute, DeviceProxy
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -95,27 +96,27 @@ class MoenchDetectorAcquire(Device):
             self.info_stream("Control tango server is not available")
             self.delete_device()
 
-    @command
-    def delete_device(self):
-        if self.zmq_receiver != None:
-            self.zmq_receiver.delete_receiver()
+    # WARNING: USE THIS COMMAND ONLY AS A SUBPROCESS
+    def _acquire(self):
+        self.set_state(DevState.RUNNING)
+        tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
+        exposure = self.tango_control_device.exposure
+        frames = self.tango_control_device.frames
+        self.device.acquire()
+        self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
+        self.set_state(DevState.ON)
+        sys.exit()
 
     # TODO: SETUP FOR TRIGGER MODE
+    # TODO: HOW TO KILL ZOMBIE PROCESSES?
     @command
     def acquire(self):
         if self.device.status == runStatus.IDLE:
-            tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
-            p = Process(target=self.device.acquire)
-            # p = Process(
-            #     target=self.acquire_and_write_path,
-            #     args=(
-            #         self.device,
-            #         self.tango_control_device,
-            #         tiff_fullpath_current,
-            #     ),
-            # )
+            # tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
+            # p = Process(target=self.device.acquire)
+            p = Process(target=self._acquire)
             p.start()
-            self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
+            # self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
         elif self.device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:
@@ -129,6 +130,11 @@ class MoenchDetectorAcquire(Device):
         else:
             self.info_stream(f"Image with dimensions {image.shape}")
             print(image)
+
+    @command
+    def delete_device(self):
+        if self.zmq_receiver != None:
+            self.zmq_receiver.delete_receiver()
 
 
 if __name__ == "__main__":

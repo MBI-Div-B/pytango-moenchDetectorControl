@@ -60,7 +60,7 @@ class MoenchDetectorControl(Device):
         label="exposure",
         dtype="float",
         unit="s",
-        format=".2e",
+        format="2.3e",
         min_value=0.0,
         max_value=1e2,
         access=AttrWriteType.READ_WRITE,
@@ -77,7 +77,7 @@ class MoenchDetectorControl(Device):
         hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="AUTO - internal trigger, EXT - external]",
-    )  # see property timing in pydetector docs
+    )
     triggers = attribute(
         label="triggers",
         dtype="int",
