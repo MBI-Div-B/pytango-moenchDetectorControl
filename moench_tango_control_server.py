@@ -1,6 +1,6 @@
 from numpy import dtype
 from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
-from tango.server import Device, attribute, command, pipe
+from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
 import subprocess
@@ -15,6 +15,47 @@ from pathlib import PosixPath
 # TODO: FISALLOWED TO ALL ATTRIBUTES
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
+
+    SLS_RECEIVER_PORT = device_property(
+        dtype="str",
+        doc="port of the slsReceiver instance, must match the config",
+        default_value="1954",
+    )
+    PROCESSING_RX_IP = device_property(
+        dtype="str",
+        doc='ip of 10gbe "PC <-> detector" lane of PC, must match the config',
+        default_value="192.168.2.200",
+    )
+    PROCESSING_RX_PORT = device_property(
+        dtype="str",
+        doc='port for 10gbe "PC <-> detector" lane of PC, must match the config',
+        default_value="50003",
+    )
+    PROCESSING_TX_IP = device_property(
+        dtype="str",
+        doc="ip for 1gbe lane (lab local network) of PC, must match the config",
+        default_value="192.168.1.118",
+    )
+    PROCESSING_TX_PORT = device_property(
+        dtype="str",
+        doc="port for 1gbe (lab local network) lane of PC, must match the config",
+        default_value="50001",
+    )
+    PROCESSING_CORES = device_property(
+        dtype="str",
+        doc="number of cores for zmq on-time processing",
+        default_value="20",
+    )
+    CONFIG_PATH_REAL = device_property(
+        dtype="str",
+        doc="path for the config file for a real detector",
+        default_value="/home/moench/detector/moench_2021.config",
+    )
+    CONFIG_PATH_VIRTUAL = device_property(
+        dtype="str",
+        doc="path for the config file for a virtual detector",
+        default_value="/home/moench/detector/moench_2021_virtual.config",
+    )
     exposure = attribute(
         label="exposure",
         dtype="float",
@@ -236,9 +277,18 @@ class MoenchDetectorControl(Device):
         self.VIRTUAL = (
             True if "--virtual" in sys.argv else False
         )  # check whether server started with "--virtual" flag
-        # Device.init_device(self) # is required?
         self.set_state(DevState.INIT)
-        self.pc_util.init_pc(virtual=self.VIRTUAL)
+        self.pc_util.init_pc(
+            virtual=self.VIRTUAL,
+            SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
+            PROCESSING_RX_IP=self.PROCESSING_RX_IP,
+            PROCESSING_RX_PORT=self.PROCESSING_RX_PORT,
+            PROCESSING_TX_IP=self.PROCESSING_TX_IP,
+            PROCESSING_TX_PORT=self.PROCESSING_TX_PORT,
+            PROCESSING_CORES=self.PROCESSING_CORES,
+            CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
+            CONFIG_PATH_VIRTUAL=self.CONFIG_PATH_VIRTUAL,
+        )
         while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
             self.attempts_counter += 1

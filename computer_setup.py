@@ -7,16 +7,20 @@ from pathlib import PosixPath
 
 
 class ComputerSetup:
-    def init_pc(self, virtual=False):
-        # TODO: use device/class properties in the control device and provide them here
-        SLS_RECEIVER_PORT = "1954"
-        PROCESSING_RX_IP = "192.168.2.200"
-        PROCESSING_RX_PORT = "50003"
-        PROCESSING_TX_IP = "192.168.1.118"
-        PROCESSING_TX_PORT = "50001"
-        PROCESSING_CORES = "20"
+    def init_pc(
+        self,
+        virtual=False,
+        SLS_RECEIVER_PORT="1954",
+        PROCESSING_RX_IP="192.168.2.200",
+        PROCESSING_RX_PORT="50003",
+        PROCESSING_TX_IP="192.168.1.118",
+        PROCESSING_TX_PORT="50001",
+        PROCESSING_CORES="20",
+        CONFIG_PATH_REAL="/home/moench/detector/moench_2021.config",
+        CONFIG_PATH_VIRTUAL="/home/moench/detector/moench_2021_virtual.config",
+    ):
         if virtual:
-            CONFIG_PATH = "/home/moench/detector/moench_2021_virtual.config"  # for virtual detector
+            CONFIG_PATH = CONFIG_PATH_VIRTUAL  # for virtual detector
             self.start_virtual_detector = subprocess.Popen(
                 "moenchDetectorServer_virtual",
                 shell=False,
@@ -25,7 +29,7 @@ class ComputerSetup:
             print("configured for virtual detector")
 
         else:
-            CONFIG_PATH = "/home/moench/detector/moench_2021.config"  # for real (hardware) detector
+            CONFIG_PATH = CONFIG_PATH_REAL  # for real (hardware) detector
             print("configured for real detector")
         # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
         # configured for moench pc only
