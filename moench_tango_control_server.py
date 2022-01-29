@@ -74,6 +74,24 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="amount of frames made per acquisition",
     )
+    framemode = attribute(
+        label="frameMode",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        fisallowed="isWriteAvailable",
+        doc="framemode of detector [frame, pedestal, newPedestal]",
+    )
+    detectormode = attribute(
+        label="detectorMode",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        fisallowed="isWriteAvailable",
+        doc="detectorMode [counting, analog, interpolating]",
+    )
     filewrite = attribute(
         label="enable or disable file writing",
         dtype="bool",
@@ -183,7 +201,7 @@ class MoenchDetectorControl(Device):
         doc="version of detector software",
     )
     detector_status = attribute(
-        label="detectore status",
+        label="detector status",
         dtype="DevState",
         access=AttrWriteType.READ,
         doc="status of detector",
@@ -301,6 +319,30 @@ class MoenchDetectorControl(Device):
 
     def write_frames(self, value):
         self.device.frames = value
+
+    def read_framemode(self):
+        return self.device.rx_jsonpara["frameMode"]
+
+    def write_framemode(self, value):
+        if type(value) == str:
+            if value in ("frame", "pedestal", "newPedestal"):
+                self.device.rx_jsonpara["frameMode"] = value
+            else:
+                self.error_stream("not allowed framemode")
+        else:
+            self.error_stream("value must be string")
+
+    def read_detectormode(self):
+        return self.device.rx_jsonpara["detectorMode"]
+
+    def write_detectormode(self, value):
+        if type(value) == str:
+            if value in ("counting", "analog", "interpolating"):
+                self.device.rx_jsonpara["detectorMode"] = value
+            else:
+                self.error_stream("not allowed framemode")
+        else:
+            self.error_stream("value must be string")
 
     def read_filewrite(self):
         return self.device.fwrite
