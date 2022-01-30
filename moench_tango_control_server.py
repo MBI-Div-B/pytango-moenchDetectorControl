@@ -7,7 +7,7 @@ import os, sys
 import re
 from computer_setup import ComputerSetup
 import computer_setup
-from pathlib import PosixPathö
+from pathlib import PosixPath
 
 # TODO: FISALLOWED TO ALL ATTRIBUTES
 class MoenchDetectorControl(Device):
