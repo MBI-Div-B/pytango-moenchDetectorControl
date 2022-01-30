@@ -119,7 +119,9 @@ class MoenchDetectorAcquire(Device):
 
     async def _async_acquire(self, loop):
         self.set_state(DevState.RUNNING)
+        tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
         await loop.run_in_executor(None, self._block_acquire)
+        self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
         self.set_state(DevState.ON)
 
     @command
