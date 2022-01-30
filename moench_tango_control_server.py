@@ -98,6 +98,7 @@ class MoenchDetectorControl(Device):
         label="filepath",
         dtype="str",
         fisallowed="isWriteAvailable",
+        access=AttrWriteType.READ_WRITE,
         doc="dir where data files will be written",
     )
     fileindex = attribute(
