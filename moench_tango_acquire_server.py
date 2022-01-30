@@ -62,22 +62,24 @@ class MoenchDetectorAcquire(Device):
     green_mode = GreenMode.Asyncio
 
     MAX_ATTEMPTS = device_property(
-        dtype="int",
+        dtype=int,
         doc="number of attempts to establish connection with control device",
         default_value=10,
     )
     CONNECT_COOLDOWN = device_property(
-        dtype="int",
+        dtype=int,
         doc="delay before the next connection attempt with control device",
         default_value=2,
     )
 
     def init_device(self):
         Device.init_device(self)
+        self.get_device_properties(self.get_device_class())
         self.set_state(DevState.INIT)
         attempts_counter = 0
         self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
+        print(self.MAX_ATTEMPTS)
         while attempts_counter < self.MAX_ATTEMPTS:
             try:
                 control_state = self.tango_control_device.state()
@@ -85,7 +87,7 @@ class MoenchDetectorAcquire(Device):
                 control_state = DevState.OFF
             else:
                 break
-            self.attempts_counter += 1
+            attempts_counter += 1
             self.info_stream(f"Control device status: {control_state}")
             self.info_stream(f"Attempts left: {self.MAX_ATTEMPTS - attempts_counter}")
             time.sleep(self.CONNECT_COOLDOWN)
@@ -113,7 +115,10 @@ class MoenchDetectorAcquire(Device):
     async def _async_acquire(self, loop):
         self.set_state(DevState.RUNNING)
         tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
+        filewriteEnabled = self.tango_control_device.filewrite
         await loop.run_in_executor(None, self._block_acquire)
+        if filewriteEnabled:
+            self.tango_control_device.fileindex +=1
         self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
         self.set_state(DevState.ON)
 
