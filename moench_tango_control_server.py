@@ -106,6 +106,8 @@ class MoenchDetectorControl(Device):
         label="file_index",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
@@ -281,6 +283,7 @@ class MoenchDetectorControl(Device):
     )
 
     def init_device(self):
+        print(self.SLS_RECEIVER_PORT)
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
@@ -372,8 +375,8 @@ class MoenchDetectorControl(Device):
 
     def write_filepath(self, value):
         try:
-            self.device.fpath = PosixPath(value)
-        except TypeError:
+            self.device.fpath = value
+        except:
             self.error_stream("not valid filepath")
 
     def read_frames(self):
