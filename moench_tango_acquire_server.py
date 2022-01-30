@@ -1,5 +1,12 @@
 import sys
-from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute, DeviceProxy
+from tango import (
+    AttrWriteType,
+    DevState,
+    DevFloat,
+    EncodedAttribute,
+    DeviceProxy,
+    GreenMode,
+)
 from tango.server import Device, attribute, command, pipe
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -12,6 +19,7 @@ import signal
 import zmq, json
 import numpy as np
 import computer_setup
+import asyncio
 
 
 class ZmqReceiver:
@@ -66,6 +74,8 @@ class ZmqReceiver:
 
 
 class MoenchDetectorAcquire(Device):
+    green_mode = GreenMode.Asyncio
+
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
