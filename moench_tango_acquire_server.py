@@ -75,6 +75,7 @@ class MoenchDetectorAcquire(Device):
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
+        self.get_device_properties(self.get_device_class())
         attempts_counter = 0
         self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
