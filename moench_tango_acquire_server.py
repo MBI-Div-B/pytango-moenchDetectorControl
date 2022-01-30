@@ -72,51 +72,51 @@ class MoenchDetectorAcquire(Device):
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.zmq_receiver = None
-        # TODO: HERE CAN BE REPLACED WITH MoenchControl deviceproxy and check flag
-        while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
-            time.sleep(0.5)
-            self.attempts_counter += 1
-            self.info_stream("Waiting for PC...")
-        if computer_setup.is_pc_ready():
-            self.device = Moench()
+        self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
+        while self.attempts_counter < MAX_ATTEMPTS:
             try:
-                st = self.device.rx_status
-                self.info_stream(f"Current device status {st}")
-            except RuntimeError as e:
-                self.info_stream(f"Unable to establish connection with detector\n{e}")
-                self.delete_device()
+                control_state = self.tango_control_device.state()
+            except:
+                control_state = DevState.OFF
+            else:
+                break
+            self.attempts_counter += 1
+            self.info_stream(f"Control device status: {control_state}")
+            self.info_stream(f"Attempts left: {MAX_ATTEMPTS - self.attempts_counter}")
+            time.sleep(1)
+        if control_state == DevState.ON:
+            self.device = Moench()
             self.zmq_receiver = ZmqReceiver(
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
             self.set_state(DevState.ON)
             # TODO: virtual flag check is necessary
-            self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
+
         else:
             self.set_state(DevState.FAULT)
             self.info_stream("Control tango server is not available")
             self.delete_device()
 
-    # WARNING: USE THIS COMMAND ONLY AS A SUBPROCESS
-    def _acquire(self):
-        self.set_state(DevState.RUNNING)
-        tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
-        exposure = self.tango_control_device.exposure
-        frames = self.tango_control_device.frames
-        self.device.acquire()
-        self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
-        self.set_state(DevState.ON)
-        sys.exit()
+    def _block_acquire(self):
+        exptime = self.device.exptime
+        frames = self.device.frames
+        self.device.startDetector()
+        self.device.startReceiver()
+        time.sleep(exptime * frames)
+        while self.device.status != runStatus.IDLE:
+            time.sleep(0.1)
+        self.device.stopReceiver()
 
-    # TODO: SETUP FOR TRIGGER MODE
-    # TODO: HOW TO KILL ZOMBIE PROCESSES?
+    async def _async_acquire(self, loop):
+        self.set_state(DevState.RUNNING)
+        await loop.run_in_executor(None, self._block_acquire)
+        self.set_state(DevState.ON)
+
     @command
-    def acquire(self):
+    async def acquire(self):
         if self.device.status == runStatus.IDLE:
-            # tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
-            # p = Process(target=self.device.acquire)
-            p = Process(target=self._acquire)
-            p.start()
-            # self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
+            loop = asyncio.get_event_loop()
+            future = loop.create_task(self._async_acquire(loop))
         elif self.device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:
