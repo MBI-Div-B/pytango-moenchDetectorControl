@@ -1,16 +1,13 @@
-from numpy import dtype
-from tango import AttrWriteType, DevState, DevFloat, EncodedAttribute
+from tango import AttrWriteType, DevState
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
-import subprocess
 import time
-import os, socket, sys
+import os, sys
 import re
-import signal
 from computer_setup import ComputerSetup
 import computer_setup
-from pathlib import PosixPath
+from pathlib import PosixPathö
 
 # TODO: FISALLOWED TO ALL ATTRIBUTES
 class MoenchDetectorControl(Device):
@@ -60,7 +57,7 @@ class MoenchDetectorControl(Device):
         label="exposure",
         dtype="float",
         unit="s",
-        format="2.3e",
+        format="%2.3e",
         min_value=0.0,
         max_value=1e2,
         access=AttrWriteType.READ_WRITE,
@@ -82,6 +79,8 @@ class MoenchDetectorControl(Device):
         label="triggers",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="number of triggers for an acquire session",
     )
@@ -99,6 +98,8 @@ class MoenchDetectorControl(Device):
         dtype="str",
         fisallowed="isWriteAvailable",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
         doc="dir where data files will be written",
     )
     fileindex = attribute(
@@ -112,8 +113,9 @@ class MoenchDetectorControl(Device):
         label="number of frames",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
-        memorized=True,
         fisallowed="isWriteAvailable",
+        memorized=True,
+        hw_memorized=True,
         doc="amount of frames made per acquisition",
     )
     framemode = attribute(
@@ -138,6 +140,8 @@ class MoenchDetectorControl(Device):
         label="enable or disable file writing",
         dtype="bool",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="turn of/off writing file to disk",
     )
@@ -147,6 +151,8 @@ class MoenchDetectorControl(Device):
         unit="V",
         min_value=60,
         max_value=200,
+        memorized=True,
+        hw_memorized=True,
         fisallowed="isWriteAvailable",
         access=AttrWriteType.READ_WRITE,
     )
@@ -155,6 +161,8 @@ class MoenchDetectorControl(Device):
         unit="s",
         dtype="float",
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="period between acquisitions",
     )
@@ -170,6 +178,8 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
+        memorized=True,
+        hw_memorized=True,
         doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
@@ -267,6 +277,8 @@ class MoenchDetectorControl(Device):
         label="path for lavue",
         dtype="str",
         access=AttrWriteType.READ,
+        memorized=True,
+        hw_memorized=True,
         doc="full path of the last capture with file:",
     )
 
@@ -372,7 +384,12 @@ class MoenchDetectorControl(Device):
         self.device.frames = value
 
     def read_framemode(self):
-        return self.device.rx_jsonpara["frameMode"]
+        try:
+            framemode = self.device.rx_jsonpara["frameMode"]
+        except:
+            framemode = ""
+            self.error_stream("no framemode set")
+        return framemode
 
     def write_framemode(self, value):
         if type(value) == str:
@@ -384,7 +401,12 @@ class MoenchDetectorControl(Device):
             self.error_stream("value must be string")
 
     def read_detectormode(self):
-        return self.device.rx_jsonpara["detectorMode"]
+        try:
+            detectormode = self.device.rx_jsonpara["detectorMode"]
+        except:
+            detectormode = ""
+            self.error_stream("no detectormode set")
+        return detectormode
 
     def write_detectormode(self, value):
         if type(value) == str:

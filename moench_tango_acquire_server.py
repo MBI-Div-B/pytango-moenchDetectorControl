@@ -1,24 +1,9 @@
-import sys
-from tango import (
-    AttrWriteType,
-    DevState,
-    DevFloat,
-    EncodedAttribute,
-    DeviceProxy,
-    GreenMode,
-)
-from tango.server import Device, attribute, command, pipe
-from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
-from _slsdet import IpAddr
-import subprocess
+from tango import DevState, DeviceProxy, GreenMode
+from tango.server import Device, attribute, command, pipe, device_property
+from slsdet import Moench, runStatus
 import time
-from multiprocessing import Process
-import os, socket
-import re
-import signal
 import zmq, json
 import numpy as np
-import computer_setup
 import asyncio
 
 
@@ -76,14 +61,24 @@ class ZmqReceiver:
 class MoenchDetectorAcquire(Device):
     green_mode = GreenMode.Asyncio
 
+    MAX_ATTEMPTS = device_property(
+        dtype="int",
+        doc="number of attempts to establish connection with control device",
+        default_value=10,
+    )
+    CONNECT_COOLDOWN = device_property(
+        dtype="int",
+        doc="delay before the next connection attempt with control device",
+        default_value=2,
+    )
+
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
-        MAX_ATTEMPTS = 5
-        self.attempts_counter = 0
+        attempts_counter = 0
         self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
-        while self.attempts_counter < MAX_ATTEMPTS:
+        while attempts_counter < self.MAX_ATTEMPTS:
             try:
                 control_state = self.tango_control_device.state()
             except:
@@ -92,16 +87,14 @@ class MoenchDetectorAcquire(Device):
                 break
             self.attempts_counter += 1
             self.info_stream(f"Control device status: {control_state}")
-            self.info_stream(f"Attempts left: {MAX_ATTEMPTS - self.attempts_counter}")
-            time.sleep(1)
+            self.info_stream(f"Attempts left: {self.MAX_ATTEMPTS - attempts_counter}")
+            time.sleep(self.CONNECT_COOLDOWN)
         if control_state == DevState.ON:
             self.device = Moench()
             self.zmq_receiver = ZmqReceiver(
                 self.device.rx_zmqip, self.device.rx_zmqport
             )
             self.set_state(DevState.ON)
-            # TODO: virtual flag check is necessary
-
         else:
             self.set_state(DevState.FAULT)
             self.info_stream("Control tango server is not available")
