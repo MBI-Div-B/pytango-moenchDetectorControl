@@ -75,8 +75,6 @@ class MoenchDetectorAcquire(Device):
     def init_device(self):
         Device.init_device(self)
         self.get_device_properties(self.get_device_class())
-        self.set_state(DevState.INIT)
-        self.get_device_properties(self.get_device_class())
         attempts_counter = 0
         self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
@@ -119,7 +117,7 @@ class MoenchDetectorAcquire(Device):
         filewriteEnabled = self.tango_control_device.filewrite
         await loop.run_in_executor(None, self._block_acquire)
         if filewriteEnabled:
-            self.tango_control_device.fileindex +=1
+            self.tango_control_device.fileindex += 1
         self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
         self.set_state(DevState.ON)
 

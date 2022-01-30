@@ -283,7 +283,6 @@ class MoenchDetectorControl(Device):
     )
 
     def init_device(self):
-        print(self.SLS_RECEIVER_PORT)
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
