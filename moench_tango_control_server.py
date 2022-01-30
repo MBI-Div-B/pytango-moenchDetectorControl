@@ -277,8 +277,6 @@ class MoenchDetectorControl(Device):
         label="path for lavue",
         dtype="str",
         access=AttrWriteType.READ,
-        memorized=True,
-        hw_memorized=True,
         doc="full path of the last capture with file:",
     )
 
