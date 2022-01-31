@@ -1,3 +1,4 @@
+#!/bin/python3
 from tango import AttrWriteType, DevState
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
