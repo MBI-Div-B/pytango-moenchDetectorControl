@@ -284,15 +284,15 @@ class MoenchDetectorControl(Device):
     )
 
     def init_device(self):
-        print(self.SLS_RECEIVER_PORT)
         Device.init_device(self)
+        self.set_state(DevState.INIT)
+        self.get_device_properties(self.get_device_class())
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.pc_util = ComputerSetup()
         self.VIRTUAL = (
             True if "--virtual" in sys.argv else False
         )  # check whether server started with "--virtual" flag
-        self.set_state(DevState.INIT)
         self.pc_util.init_pc(
             virtual=self.VIRTUAL,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
