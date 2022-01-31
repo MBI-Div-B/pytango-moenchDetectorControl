@@ -53,6 +53,11 @@ class MoenchDetectorControl(Device):
         doc="path for the config file for a virtual detector",
         default_value="/home/moench/detector/moench_2021_virtual.config",
     )
+    IS_VIRTUAL_DETECTOR = device_property(
+        dtype="bool",
+        doc="the flag whether a virtual detector need to be used",
+        mandatory=True,
+    )
     exposure = attribute(
         label="exposure",
         dtype="float",
@@ -289,11 +294,8 @@ class MoenchDetectorControl(Device):
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         self.pc_util = ComputerSetup()
-        self.VIRTUAL = (
-            True if "--virtual" in sys.argv else False
-        )  # check whether server started with "--virtual" flag
         self.pc_util.init_pc(
-            virtual=self.VIRTUAL,
+            virtual=self.IS_VIRTUAL_DETECTOR,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
             PROCESSING_RX_IP=self.PROCESSING_RX_IP,
             PROCESSING_RX_PORT=self.PROCESSING_RX_PORT,
@@ -595,7 +597,7 @@ class MoenchDetectorControl(Device):
     @command
     def delete_device(self):
         try:
-            self.pc_util.deactivate_pc(self.VIRTUAL)
+            self.pc_util.deactivate_pc(self.IS_VIRTUAL_DETECTOR)
             self.info_stream("SlsReceiver or zmq socket processes were killed.")
         except Exception:
             self.info_stream(
