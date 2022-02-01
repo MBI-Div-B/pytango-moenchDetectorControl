@@ -13,6 +13,12 @@ This device connects to MOENCH detector and allows to control the state of the d
 * `slsDetectorGroup binary executables`
 
 ## Start
+Please note:
+* a server starts with a virtual detector, when the `IS_VIRTUAL_DETECTOR` boolean property of `MoenchDetectorControl` tango device has been assigned to `True`. Otherwise a real detector must be turned on.
+
+### using tango-starter (the most preferable way)
+1. Choose a `moench` starter from `astor` dropdown menu.
+2. Start the `MoenchDetectorControl` server and the `MoenchAcquireControl` in a common way.
 ### using the shell script
 1. Start the both servers (control and acquire) via shell script:  
 ```text
@@ -26,7 +32,7 @@ Options and arguments (and corresponding environment variables):
 ### manually
 #### locally
 Start servers via command:
-* `python3 moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1 [-v4] [--virtual]`
+* `python3 moench_tango_server.py moench -ORBendPoint giop:tcp:localhost:1234 -nodb -dlist id1/tests/dev1 [-v4]`
 * `python3 moench_acquire_server.py moench -ORBendPoint giop:tcp:localhost:1235 -nodb -dlist id1/tests/dev2 [-v4]`
 
 and then connect from Jive/iTango:
@@ -35,12 +41,13 @@ and then connect from Jive/iTango:
 
 #### production
 Start servers via command:
-* `python3 moench_tango_server.py moench [-v4] [--virtual]`
+* `python3 moench_tango_server.py moench [-v4]`
 * `python3 moench_acquire_server.py moench [-v4]`
 
 and then connect from Jive/iTango:
 * `rsxs/moenchControl/bchip286`
 * `rsxs/moenchAcquire/bchip286`
+
 
 ## Help
 

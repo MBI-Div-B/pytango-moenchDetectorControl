@@ -3,9 +3,10 @@ if [[ ($* == *--help*) || ($* == *-h*)]]
 then
   echo "Usage: sh start_tango_servers.sh [OPTIONS...]
   Options and arguments (and corresponding environment variables):
-  --virtual : use virtual detector
   --local   : run tango servers locally without connecting to real DB
-  --verbose : use info_stream for tango servers"
+  --verbose : use info_stream for tango servers
+  check the  \"IS_VIRTUAL_DETECTOR\" property for a startup with a virtual detector"
+  
 else
   if [[ $* == *--verbose* ]]
   then
@@ -27,18 +28,9 @@ else
   MESSAGE_3=">>>> Started on network\n connect via jive"
   fi
 
-  if [[ $* == *--virtual* ]]
-  then
-  MESSAGE_2=">>>> with a virtual detector..."
-  VIRTUAL_ARG="--virtual"
-  else
-  MESSAGE_2=">>>> with a real detector..."
-  VIRTUAL_ARG=""
-  fi
-
   echo ${MESSAGE_1}
   echo ${MESSAGE_2}
-  gnome-terminal -- /bin/sh -c "python3 moench_tango_control_server.py moench ${NETWORK_ARG_CONTROL} ${VERBOSE_ARG} ${VIRTUAL_ARG}; exec bash"
+  gnome-terminal -- /bin/sh -c "python3 moench_tango_control_server.py moench ${NETWORK_ARG_CONTROL} ${VERBOSE_ARG}; exec bash"
   sleep 10
   gnome-terminal -- /bin/sh -c "python3 moench_tango_acquire_server.py moench ${NETWORK_ARG_ACQUIRE} ${VERBOSE_ARG}; exec bash"
   echo -e ${MESSAGE_3}
