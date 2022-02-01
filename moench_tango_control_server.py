@@ -59,6 +59,17 @@ class MoenchDetectorControl(Device):
         doc="the flag whether a virtual detector need to be used",
         mandatory=True,
     )
+    HTTP_HOST_ADDRESS = device_property(
+        dtype="str",
+        doc="the ip address of detector pc where the captures can be found",
+        default_value="http://10.6.5.148",
+    )
+    HTTP_ROOT_PATH = device_property(
+        dtype="str",
+        doc="root page for file listing. currently using nginx on moench. check /etc/nginx/nginx.conf",
+        default_value="/files",
+    )
+
     exposure = attribute(
         label="exposure",
         dtype="float",
@@ -286,6 +297,12 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ,
         doc="full path of the last capture with file:",
+    )
+    tiff_httppath_last = attribute(
+        label="http path",
+        dtype="str",
+        access=AttrWriteType.READ,
+        doc="full http path for the last capture with file",
     )
 
     def init_device(self):
@@ -555,6 +572,15 @@ class MoenchDetectorControl(Device):
         return "file:" + self._tiff_fullpath_last
 
     def write_tiff_fullpath_last_formatted(self, value):
+        pass
+
+    def read_tiff_httppath_last(self):
+        http_prefix = self.HTTP_HOST_ADDRESS
+        web_prefix = self.HTTP_ROOT_PATH
+        http_fullpath = http_prefix + web_prefix + self._tiff_fullpath_last
+        return http_fullpath
+
+    def write_tiff_httppath_last(self, value):
         pass
 
     # TODO: rewrite
