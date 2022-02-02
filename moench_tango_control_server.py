@@ -271,11 +271,11 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="version of detector software",
     )
-    detector_status = attribute(
+    raw_detector_status = attribute(
         label="detector status",
-        dtype="DevState",
+        dtype="str",
         access=AttrWriteType.READ,
-        doc="status of detector",
+        doc="raw status of detector",
     )
     tiff_fullpath_next = attribute(
         label="next capture path",
@@ -583,42 +583,10 @@ class MoenchDetectorControl(Device):
     def write_tiff_httppath_last(self, value):
         pass
 
-    # TODO: rewrite
-    # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
-    #  using DevState
-    # static DevState	ALARM
-    # static DevState	CLOSE
-    # static DevState	DISABLE
-    # static DevState	EXTRACT
-    # static DevState	FAULT
-    # static DevState	INIT
-    # static DevState	INSERT
-    # static DevState	MOVING
-    # static DevState	OFF
-    # static DevState	ON
-    # static DevState	OPEN
-    # static DevState	RUNNING
-    # static DevState	STANDBY
-    # static DevState	UNKNOWN
+    def read_raw_detector_status(self):
+        return str(self.device.status)
 
-    def read_detector_status(self):
-        # TODO: check behavior and statuses' identities
-        statuses = {
-            runStatus.IDLE: DevState.ON,
-            runStatus.ERROR: DevState.FAULT,
-            runStatus.WAITING: DevState.STANDBY,
-            runStatus.RUN_FINISHED: DevState.ON,
-            runStatus.TRANSMITTING: DevState.RUNNING,
-            runStatus.RUNNING: DevState.RUNNING,
-            runStatus.STOPPED: DevState.ON,
-        }
-        det_status_devstate = statuses.get(self.device.status)
-        if det_status_devstate == None:
-            return DevState.UNKNOWN
-        else:
-            return det_status_devstate
-
-    def write_detector_status(self):
+    def write_raw_detector_status(self):
         pass
 
     @command
