@@ -1,7 +1,7 @@
 #!/bin/python3
 from tango import DevState, DeviceProxy, GreenMode
 from tango.server import Device, attribute, command, pipe, device_property
-from slsdet import Moench, runStatus
+from slsdet import Moench, runStatus, timingMode
 import time
 import zmq, json
 import numpy as np
@@ -79,7 +79,6 @@ class MoenchDetectorAcquire(Device):
         attempts_counter = 0
         self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
-        print(self.MAX_ATTEMPTS)
         while attempts_counter < self.MAX_ATTEMPTS:
             try:
                 control_state = self.tango_control_device.state()
@@ -93,9 +92,6 @@ class MoenchDetectorAcquire(Device):
             time.sleep(self.CONNECT_COOLDOWN)
         if control_state == DevState.ON:
             self.device = Moench()
-            self.zmq_receiver = ZmqReceiver(
-                self.device.rx_zmqip, self.device.rx_zmqport
-            )
             self.set_state(DevState.ON)
         else:
             self.set_state(DevState.FAULT)
@@ -108,15 +104,22 @@ class MoenchDetectorAcquire(Device):
         self.device.startDetector()
         self.device.startReceiver()
         time.sleep(exptime * frames)
-        while self.device.status != runStatus.IDLE:
+        while (
+            self.device.status != runStatus.IDLE
+        ):  # TODO: check, whether self.device.rx_status need to be used with a real detector.
             time.sleep(0.1)
         self.device.stopReceiver()
 
     async def _async_acquire(self, loop):
-        self.set_state(DevState.RUNNING)
         tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
         filewriteEnabled = self.tango_control_device.filewrite
+        # assume since here it waits for a trigger
+        if self.device.timing == timingMode.TRIGGER_EXPOSURE:
+            self.set_state(DevState.STANDBY)
+        # since here it's waiting for a trigger signal
         await loop.run_in_executor(None, self._block_acquire)
+        # it reaches this line, when trigger signal is sent
+        self.set_state(DevState.RUNNING)
         if filewriteEnabled:
             self.tango_control_device.fileindex += 1
         self.tango_control_device.tiff_fullpath_last = tiff_fullpath_current
@@ -131,6 +134,11 @@ class MoenchDetectorAcquire(Device):
             self.info_stream("Detector is acquiring")
         else:
             self.error_stream("Unable to acquire")
+
+    @command
+    def stop_acquire(self):
+        # TODO: perhaps wontfix if a real detector cannot be stopped in the same way as virtual...
+        pass
 
     @command
     def get_frame(self):
