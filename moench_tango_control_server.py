@@ -1,5 +1,5 @@
 #!/bin/python3
-from tango import AttrWriteType, DevState
+from tango import AttrWriteType, DevState, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -265,13 +265,16 @@ class MoenchDetectorControl(Device):
     )
 
     firmware_version = attribute(
+        display_level=DispLevel.EXPERT,
         label="det. version",
         dtype="str",
         access=AttrWriteType.READ,
         fisallowed="isWriteAvailable",
         doc="version of detector software",
     )
+
     raw_detector_status = attribute(
+        display_level=DispLevel.EXPERT,
         label="detector status",
         dtype="str",
         access=AttrWriteType.READ,
@@ -291,12 +294,6 @@ class MoenchDetectorControl(Device):
         memorized=True,
         hw_memorized=True,
         doc="full path of the last capture",
-    )
-    tiff_fullpath_last_formatted = attribute(
-        label="path for lavue",
-        dtype="str",
-        access=AttrWriteType.READ,
-        doc="full path of the last capture with file:",
     )
     tiff_httppath_last = attribute(
         label="http path",
@@ -567,12 +564,6 @@ class MoenchDetectorControl(Device):
 
     def write_tiff_fullpath_last(self, value):
         self._tiff_fullpath_last = value
-
-    def read_tiff_fullpath_last_formatted(self):
-        return "file:" + self._tiff_fullpath_last
-
-    def write_tiff_fullpath_last_formatted(self, value):
-        pass
 
     def read_tiff_httppath_last(self):
         http_prefix = self.HTTP_HOST_ADDRESS
