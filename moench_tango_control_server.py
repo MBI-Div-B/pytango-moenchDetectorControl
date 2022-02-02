@@ -165,6 +165,7 @@ class MoenchDetectorControl(Device):
         doc="turn of/off writing file to disk",
     )
     highvoltage = attribute(
+        display_level=DispLevel.EXPERT,
         label="high voltage on sensor",
         dtype="int",
         unit="V",
@@ -186,6 +187,7 @@ class MoenchDetectorControl(Device):
         doc="period between acquisitions",
     )
     samples = attribute(
+        display_level=DispLevel.EXPERT,
         label="samples amount",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
@@ -193,6 +195,7 @@ class MoenchDetectorControl(Device):
         doc="in analog mode only",
     )
     settings = attribute(
+        display_level=DispLevel.EXPERT,
         label="gain settings",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
@@ -202,6 +205,7 @@ class MoenchDetectorControl(Device):
         doc="[G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]",
     )  # converted from enums
     zmqip = attribute(
+        display_level=DispLevel.EXPERT,
         label="zmq ip address",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
@@ -209,6 +213,7 @@ class MoenchDetectorControl(Device):
         doc="ip to listen to zmq data streamed out from receiver or intermediate process",
     )
     zmqport = attribute(
+        display_level=DispLevel.EXPERT,
         label="zmq port",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
@@ -216,6 +221,7 @@ class MoenchDetectorControl(Device):
         doc="port number to listen to zmq data",
     )  # can be either a single int or list (or tuple) of ints
     rx_discardpolicy = attribute(
+        display_level=DispLevel.EXPERT,
         label="discard policy",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
@@ -223,6 +229,7 @@ class MoenchDetectorControl(Device):
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
     )  # converted from enums
     rx_missingpackets = attribute(
+        display_level=DispLevel.EXPERT,
         label="missed packets",
         dtype="int",
         access=AttrWriteType.READ,
@@ -230,6 +237,7 @@ class MoenchDetectorControl(Device):
         doc="number of missing packets for each port in receiver",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
+        display_level=DispLevel.EXPERT,
         label="receiver hostname",
         dtype="str",
         access=AttrWriteType.READ_WRITE,
@@ -237,6 +245,7 @@ class MoenchDetectorControl(Device):
         doc="receiver hostname or IP address",
     )
     rx_tcpport = attribute(
+        display_level=DispLevel.EXPERT,
         label="tcp rx_port",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
@@ -244,12 +253,14 @@ class MoenchDetectorControl(Device):
         doc="port for for client-receiver communication via TCP",
     )
     rx_status = attribute(
+        display_level=DispLevel.EXPERT,
         label="receiver rx/tx status",
         dtype="str",
         access=AttrWriteType.READ,
         fisallowed="isWriteAvailable",
     )
     rx_zmqstream = attribute(
+        display_level=DispLevel.EXPERT,
         label="data streaming via zmq",
         dtype="bool",
         access=AttrWriteType.READ_WRITE,
@@ -257,6 +268,7 @@ class MoenchDetectorControl(Device):
         doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
     rx_version = attribute(
+        display_level=DispLevel.EXPERT,
         label="rec. version",
         dtype="str",
         access=AttrWriteType.READ,
@@ -296,6 +308,7 @@ class MoenchDetectorControl(Device):
         doc="full path of the last capture",
     )
     tiff_httppath_last = attribute(
+        display_level=DispLevel.EXPERT,
         label="http path",
         dtype="str",
         access=AttrWriteType.READ,
