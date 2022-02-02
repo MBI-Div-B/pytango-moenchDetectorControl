@@ -603,18 +603,6 @@ class MoenchDetectorControl(Device):
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
 
-    @command
-    def start(self):
-        self.device.start()
-
-    @command
-    def rx_start(self):
-        self.device.rx_start()
-
-    @command
-    def rx_stop(self):
-        self.device.rx_stop()
-
 
 if __name__ == "__main__":
     MoenchDetectorControl.run_server()
