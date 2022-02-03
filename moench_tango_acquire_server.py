@@ -1,5 +1,5 @@
 #!/bin/python3
-from tango import DevState, DeviceProxy, GreenMode
+from tango import DevState, DeviceProxy, GreenMode, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode
 import time
@@ -108,7 +108,8 @@ class MoenchDetectorAcquire(Device):
             self.info_stream("Control tango server is not available")
             self.delete_device()
 
-    def _update_tango_state(self):
+    @command(display_level=DispLevel.EXPERT, polling_period=100)
+    def update_tango_state(self):
         tango_state = self.status_dict.get(self.device.status)
         if tango_state is not None:
             self.set_state(tango_state)
@@ -120,11 +121,9 @@ class MoenchDetectorAcquire(Device):
         frames = self.device.frames
         self.device.startDetector()
         self.device.startReceiver()
-        # time.sleep(exptime * frames)
-        while self.device.status != runStatus.IDLE:
-            self._update_tango_state()
+        time.sleep(exptime * frames)
+        while self.get_state() != DevState.ON:
             time.sleep(0.1)
-        self._update_tango_state()
         self.device.stopReceiver()
 
     async def _async_acquire(self, loop):
