@@ -314,6 +314,14 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ,
         doc="full http path for the last capture with file",
     )
+    tiff_httppath_next = attribute(
+        display_level=DispLevel.EXPERT,
+        label="http path",
+        dtype="str",
+        access=AttrWriteType.READ,
+        doc="full http path for the next capture with file",
+        fisallowed="isWriteAvailable",
+    )
 
     def init_device(self):
         Device.init_device(self)
@@ -582,6 +590,19 @@ class MoenchDetectorControl(Device):
         http_prefix = self.HTTP_HOST_ADDRESS
         web_prefix = self.HTTP_ROOT_PATH
         http_fullpath = http_prefix + web_prefix + self._tiff_fullpath_last
+        return http_fullpath
+
+    def write_tiff_httppath_next(self, value):
+        pass
+
+    def read_tiff_httppath_next(self):
+        http_prefix = self.HTTP_HOST_ADDRESS
+        web_prefix = self.HTTP_ROOT_PATH
+        filename = self.read_filename()
+        file_index = self.read_fileindex()
+        savepath = self.read_filepath()
+        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
+        http_fullpath = http_prefix + web_prefix + fullpath
         return http_fullpath
 
     def write_tiff_httppath_last(self, value):
