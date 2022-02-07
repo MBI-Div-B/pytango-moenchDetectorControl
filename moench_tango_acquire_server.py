@@ -121,7 +121,8 @@ class MoenchDetectorAcquire(Device):
         frames = self.device.frames
         self.device.startDetector()
         self.device.startReceiver()
-        time.sleep(exptime * frames)
+        # in case detector is stopped we want to leave this section earlier
+        # time.sleep(exptime * frames)
         while self.get_state() != DevState.ON:
             time.sleep(0.1)
         self.device.stopReceiver()
@@ -148,8 +149,7 @@ class MoenchDetectorAcquire(Device):
     def stop_acquire(self):
         # TODO: perhaps wontfix if a real detector cannot be stopped in the same way as virtual...
         # check https://github.com/MBI-Div-B/pytango-moenchDetector/issues/13
-        # self.device.stop()
-        pass
+        self.device.stop()
 
     @command
     def get_frame(self):
