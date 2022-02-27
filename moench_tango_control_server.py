@@ -9,7 +9,7 @@ import re
 import computer_setup
 from pathlib import PosixPath
 
-# TODO: FISALLOWED TO ALL ATTRIBUTES
+
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
 
@@ -429,10 +429,18 @@ class MoenchDetectorControl(Device):
         return str(self.device.fpath)
 
     def write_filepath(self, value):
-        try:
-            self.device.fpath = value
-        except:
-            self.error_stream("not valid filepath")
+        if not os.path.isdir(value):
+            try:
+                os.makedirs(value)
+            except PermissionError:
+                self.error_stream(f"no permission to create a directory in {value}")
+            except OSError:
+                self.error_stream(f"os error while creating a dir in {value}")
+        if os.path.exists(value) & os.path.isdir(value):
+            try:
+                self.device.fpath = value
+            except:
+                self.error_stream("not valid filepath")
 
     def read_frames(self):
         return self.device.frames
@@ -589,6 +597,8 @@ class MoenchDetectorControl(Device):
 
     def read_tiff_fullpath_next(self):
         # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
+        # FIXME: if detector mode is "pedestal" file will have a suffix "_det"
+        # before .tiff
         filename = self.read_filename()
         file_index = self.read_fileindex()
         savepath = self.read_filepath()

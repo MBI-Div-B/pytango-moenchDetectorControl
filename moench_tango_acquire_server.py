@@ -3,60 +3,9 @@ from tango import DevState, DeviceProxy, GreenMode, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode
 import time
-import zmq, json
+import json
 import numpy as np
 import asyncio
-
-
-class ZmqReceiver:
-    def __init__(self, ip, port):
-        # need to be initialized only in case if the zmq server is up
-        port = port
-        ip = ip
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
-        endpoint = f"tcp://{ip}:{port}"
-        print(f"Connecting to: {endpoint}")
-        self.socket.connect(endpoint)
-        self.socket.setsockopt(zmq.SUBSCRIBE, b"")
-
-    def get_dtype(self, dr):
-        if isinstance(dr, str):
-            dr = int(dr)
-        if dr == 32:
-            return np.uint32
-        elif dr == 16:
-            return np.uint16
-        elif dr == 8:
-            return np.uint8
-        elif dr == 4:
-            return np.uint8
-        else:
-            raise TypeError(f"Bit depth: {dr} is not supported")
-
-    def get_frame(self):
-        # Read one frame from the receiver zmq stream, can be extended
-        # to multi frames
-        try:
-            header = json.loads(self.socket.recv(flags=zmq.NOBLOCK))
-            msg = self.socket.recv(copy=False, flags=zmq.NOBLOCK)
-            view = np.frombuffer(
-                msg.buffer, dtype=self.get_dtype(header["bitmode"])
-            ).reshape(header["shape"])
-            return view.copy(), header
-        except:
-            return None, None
-
-    def get_all_frames(self):
-        pass
-
-    def delete_receiver(self):
-        try:
-            self.context.destroy()
-        except:
-            print("Unable to destroy zmq context")
-        if self.context.closed:
-            print("Successfully closed zmq socket")
 
 
 class MoenchDetectorAcquire(Device):
@@ -87,7 +36,6 @@ class MoenchDetectorAcquire(Device):
         Device.init_device(self)
         self.get_device_properties(self.get_device_class())
         attempts_counter = 0
-        self.zmq_receiver = None
         self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
         while attempts_counter < self.MAX_ATTEMPTS:
             try:
@@ -147,23 +95,11 @@ class MoenchDetectorAcquire(Device):
 
     @command
     def stop_acquire(self):
-        # TODO: perhaps wontfix if a real detector cannot be stopped in the same way as virtual...
-        # check https://github.com/MBI-Div-B/pytango-moenchDetector/issues/13
         self.device.stop()
 
     @command
-    def get_frame(self):
-        image, header = self.zmq_receiver.get_frame()
-        if image == None or header == None:
-            self.info_stream("No acquired capture in the zmq queue")
-        else:
-            self.info_stream(f"Image with dimensions {image.shape}")
-            print(image)
-
-    @command
     def delete_device(self):
-        if self.zmq_receiver != None:
-            self.zmq_receiver.delete_receiver()
+        Device.delete_device(self)
 
 
 if __name__ == "__main__":
