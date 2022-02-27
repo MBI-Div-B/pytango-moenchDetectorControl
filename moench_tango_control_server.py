@@ -6,7 +6,6 @@ from _slsdet import IpAddr
 import time
 import os, sys
 import re
-from computer_setup import ComputerSetup
 import computer_setup
 from pathlib import PosixPath
 
@@ -68,6 +67,21 @@ class MoenchDetectorControl(Device):
         dtype="str",
         doc="root page for file listing. currently using nginx on moench. check /etc/nginx/nginx.conf",
         default_value="/files",
+    )
+    ROOT_USERNAME = device_property(
+        dtype="str",
+        doc="username of root user. required since slsReceiver should be started with root privileges",
+        mandatory=True,
+    )
+    ROOT_PASSWORD = device_property(
+        dtype="str",
+        doc="password of specified root user. required since slsReceiver should be started with root privileges",
+        mandatory=True,
+    )
+    EXECUTABLES_PATH = device_property(
+        dtype="str",
+        doc="path of all moench sls executables",
+        default_value="/opt/slsDetectorPackage/build/bin/",
     )
 
     exposure = attribute(
@@ -329,8 +343,9 @@ class MoenchDetectorControl(Device):
         self.get_device_properties(self.get_device_class())
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
-        self.pc_util = ComputerSetup()
-        self.pc_util.init_pc(
+        computer_setup.kill_all_pc_processes(self.ROOT_USERNAME, self.ROOT_PASSWORD)
+        time.sleep(3)
+        computer_setup.init_pc(
             virtual=self.IS_VIRTUAL_DETECTOR,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
             PROCESSING_RX_IP=self.PROCESSING_RX_IP,
@@ -340,6 +355,9 @@ class MoenchDetectorControl(Device):
             PROCESSING_CORES=self.PROCESSING_CORES,
             CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
             CONFIG_PATH_VIRTUAL=self.CONFIG_PATH_VIRTUAL,
+            EXECUTABLES_PATH=self.EXECUTABLES_PATH,
+            ROOT_USERNAME=self.ROOT_USERNAME,
+            ROOT_PASSWORD=self.ROOT_PASSWORD,
         )
         while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
@@ -617,7 +635,7 @@ class MoenchDetectorControl(Device):
     @command
     def delete_device(self):
         try:
-            self.pc_util.deactivate_pc(self.IS_VIRTUAL_DETECTOR)
+            computer_setup.deactivate_pc(self.ROOT_USERNAME, self.ROOT_PASSWORD)
             self.info_stream("SlsReceiver or zmq socket processes were killed.")
         except Exception:
             self.info_stream(
