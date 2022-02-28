@@ -158,7 +158,7 @@ class MoenchDetectorControl(Device):
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="framemode of detector [frame, pedestal, newPedestal]",
+        doc="framemode of detector [raw, frame, pedestal, newPedestal]",
     )
     detectormode = attribute(
         label="detectorMode",
@@ -458,7 +458,7 @@ class MoenchDetectorControl(Device):
 
     def write_framemode(self, value):
         if type(value) == str:
-            if value in ("frame", "pedestal", "newPedestal"):
+            if value in ("raw", "frame", "pedestal", "newPedestal"):
                 self.device.rx_jsonpara["frameMode"] = value
             else:
                 self.error_stream("not allowed framemode")
