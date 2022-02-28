@@ -67,13 +67,22 @@ class MoenchDetectorAcquire(Device):
     def _block_acquire(self):
         exptime = self.device.exptime
         frames = self.device.frames
-        self.device.startDetector()
         self.device.startReceiver()
+        self.info_stream("start receiver")
+        self.device.startDetector()
+        self.info_stream("start detector")
         # in case detector is stopped we want to leave this section earlier
         # time.sleep(exptime * frames)
+        """
+        A detector takes a while after startDetector() execution to change its state.
+        So if there is no delay after startDetector() and self.get_state() check it's very probable that
+        detector will be still in ON mode (even not started to acquire.)
+        """
+        time.sleep(0.2)
         while self.get_state() != DevState.ON:
             time.sleep(0.1)
         self.device.stopReceiver()
+        self.info_stream("stop receiver")
 
     async def _async_acquire(self, loop):
         tiff_fullpath_current = self.tango_control_device.tiff_fullpath_next
