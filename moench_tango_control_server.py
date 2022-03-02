@@ -242,13 +242,13 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
     )  # converted from enums
-    rx_missingpackets = attribute(
+    rx_framescaught = attribute(
         display_level=DispLevel.EXPERT,
-        label="missed packets",
+        label="frames caught",
         dtype="int",
         access=AttrWriteType.READ,
         fisallowed="isWriteAvailable",
-        doc="number of missing packets for each port in receiver",
+        doc="number of frames which were successfully transferred",
     )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
         display_level=DispLevel.EXPERT,
@@ -553,10 +553,10 @@ class MoenchDetectorControl(Device):
         if value in list(disard_dict.keys()):
             self.device.rx_discardpolicy = frameDiscardPolicy(disard_dict[value])
 
-    def read_rx_missingpackets(self):
-        return str(self.device.rx_missingpackets)
+    def read_rx_framescaught(self):
+        return self.device.rx_framescaught
 
-    def write_rx_missingpackets(self, value):
+    def write_rx_framescaught(self, value):
         pass
 
     def read_rx_hostname(self):
