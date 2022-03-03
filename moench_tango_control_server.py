@@ -1,4 +1,5 @@
 #!/bin/python3
+from turtle import pos
 from tango import AttrWriteType, DevState, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -88,14 +89,28 @@ class MoenchDetectorControl(Device):
         label="exposure",
         dtype="float",
         unit="s",
-        format="%2.3e",
-        min_value=0.0,
+        format="%6.2e",
+        min_value=25e-9,
         max_value=1e2,
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="single frame exposure time",
+    )
+
+    delay = attribute(
+        label="delay",
+        dtype="float",
+        unit="s",
+        format="%6.2e",
+        min_value=0.0,
+        max_value=1e2,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        fisallowed="isWriteAvailable",
+        doc="delay after trigger signal",
     )
     timing_mode = attribute(
         label="trigger mode",
@@ -388,6 +403,12 @@ class MoenchDetectorControl(Device):
     def write_exposure(self, value):
         self.device.exptime = value
 
+    def read_delay(self):
+        return self.device.delay
+
+    def write_delay(self, value):
+        self.device.delay = value
+
     def read_fileindex(self):
         return self.device.findex
 
@@ -597,12 +618,11 @@ class MoenchDetectorControl(Device):
 
     def read_tiff_fullpath_next(self):
         # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
-        # FIXME: if detector mode is "pedestal" file will have a suffix "_det"
-        # before .tiff
+        savepath = self.read_filepath()
         filename = self.read_filename()
         file_index = self.read_fileindex()
-        savepath = self.read_filepath()
-        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
+        postfix = "_ped" if self.read_framemode() in ("pedestal", "newPedestal") else ""
+        fullpath = os.path.join(savepath, f"{filename}_{file_index}{postfix}.tiff")
         return fullpath
 
     def write_tiff_fullpath_next(self, value):
