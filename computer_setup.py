@@ -43,7 +43,7 @@ def init_pc(
     time.sleep(5)
     subprocess.Popen(
         [
-            f"{EXECUTABLES_PATH}moench04ZmqProcess",
+            f"{EXECUTABLES_PATH}moench03ZmqProcess",
             PROCESSING_RX_IP,
             PROCESSING_RX_PORT,
             PROCESSING_TX_IP,
@@ -68,7 +68,7 @@ def kill_all_pc_processes(ROOT_USERNAME, ROOT_PASSWORD):
         root_password=ROOT_PASSWORD,
         sudo=True,
     )
-    kill_processes_by_name("moench04ZmqProcess")
+    kill_processes_by_name("moench03ZmqProcess")
     kill_processes_by_name("moenchDetectorServer_virtual")
 
 
