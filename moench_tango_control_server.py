@@ -1,5 +1,5 @@
 #!/bin/python3
-from turtle import pos
+from numpy import tri
 from tango import AttrWriteType, DevState, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -13,6 +13,7 @@ from pathlib import PosixPath
 
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
+    _last_triggers = ""
 
     SLS_RECEIVER_PORT = device_property(
         dtype="str",
@@ -125,8 +126,8 @@ class MoenchDetectorControl(Device):
         label="triggers",
         dtype="int",
         access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
+        memorized=False,
+        hw_memorized=False,
         fisallowed="isWriteAvailable",
         doc="number of triggers for an acquire session",
     )
@@ -427,10 +428,13 @@ class MoenchDetectorControl(Device):
         if type(value) == str:
             if value.lower() == "auto":
                 self.info_stream("Setting auto timing mode")
+                self._last_triggers = self.read_triggers()
+                self.write_triggers(1)
                 self.device.timing = timingMode.AUTO_TIMING
             elif value.lower() == "ext":
                 self.info_stream("Setting external timing mode")
                 self.device.timing = timingMode.TRIGGER_EXPOSURE
+                self.triggers = self._last_triggers
         else:
             self.info_stream('Timing mode should be "AUTO/EXT" string')
 
