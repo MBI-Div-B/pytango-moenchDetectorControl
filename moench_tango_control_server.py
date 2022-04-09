@@ -1,4 +1,5 @@
 #!/bin/python3
+from this import d
 from numpy import tri
 from tango import AttrWriteType, DevState, DispLevel
 from tango.server import Device, attribute, command, pipe, device_property
@@ -9,25 +10,92 @@ import os, sys
 import re
 import computer_setup
 from pathlib import PosixPath
-from enum import Enum
+from enum import Enum, IntEnum
+from bidict import bidict
 
 
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
     _last_triggers = ""
 
-    class FrameMode(Enum):
-        RAW = "raw"
-        FRAME = "frame"
-        PEDESTAL = "pedestal"
-        NEWPEDESTAL = "newPedestal"
-        NO_FRAME_MODE = "noFrameMode"
+    class FrameMode(IntEnum):
+        # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
+        # RAW = "raw"
+        # FRAME = "frame"
+        # PEDESTAL = "pedestal"
+        # NEWPEDESTAL = "newPedestal"
+        # NO_FRAME_MODE = "noFrameMode"
+        RAW = 0
+        FRAME = 1
+        PEDESTAL = 2
+        NEWPEDESTAL = 3
+        NO_FRAME_MODE = 4
 
-    class DetectorMode(Enum):
-        COUNTING = "counting"
-        ANALOG = "analog"
-        INTERPOLATING = "interpolating"
-        NO_DETECTOR_MODE = "nodDetectorMode"
+    frameMode_bidict = bidict(
+        {
+            FrameMode.RAW: "raw",
+            FrameMode.FRAME: "frame",
+            FrameMode.PEDESTAL: "pedestal",
+            FrameMode.NEWPEDESTAL: "newPedestal",
+            FrameMode.NO_FRAME_MODE: "noFrameMode",
+        }
+    )
+
+    class DetectorMode(IntEnum):
+        # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
+        # COUNTING = "counting"
+        # ANALOG = "analog"
+        # INTERPOLATING = "interpolating"
+        # NO_DETECTOR_MODE = "noDetectorMode"
+        COUNTING = 0
+        ANALOG = 1
+        INTERPOLATING = 2
+        NO_DETECTOR_MODE = 3
+
+    detectorMode_bidict = bidict(
+        {
+            DetectorMode.COUNTING: "counting",
+            DetectorMode.ANALOG: "analog",
+            DetectorMode.INTERPOLATING: "interpolating",
+            DetectorMode.NO_DETECTOR_MODE: "noDetectorMode",
+        }
+    )
+
+    class TimingMode(IntEnum):
+        # the values are the same as in slsdet.timingMode so no bidict table is required
+        AUTO_TIMING = 0
+        TRIGGER_EXPOSURE = 1
+
+    class DetectorSettings(IntEnum):
+        # TODO: settings enums...
+        # [G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]
+        G1_HIGHGAIN = 0
+        G1_LOWGAIN = 1
+        G2_HIGHCAP_HIGHGAIN = 2
+        G2_HIGHCAP_LOWGAIN = 3
+        G2_LOWCAP_HIGHGAIN = 4
+        G2_LOWCAP_LOWGAIN = 5
+        G4_HIGHGAIN = 6
+        G4_LOWGAIN = 7
+
+    detectorSettings_bidict = bidict(
+        {
+            DetectorSettings.G1_HIGHGAIN: detectorSettings.G1_HIGHGAIN,
+            DetectorSettings.G1_LOWGAIN: detectorSettings.G1_LOWGAIN,
+            DetectorSettings.G2_HIGHCAP_HIGHGAIN: detectorSettings.G2_HIGHCAP_HIGHGAIN,
+            DetectorSettings.G2_HIGHCAP_LOWGAIN: detectorSettings.G2_HIGHCAP_LOWGAIN,
+            DetectorSettings.G2_LOWCAP_HIGHGAIN: detectorSettings.G2_LOWCAP_HIGHGAIN,
+            DetectorSettings.G2_LOWCAP_LOWGAIN: detectorSettings.G2_LOWCAP_LOWGAIN,
+            DetectorSettings.G4_HIGHGAIN: detectorSettings.G4_HIGHGAIN,
+            DetectorSettings.G4_LOWGAIN: detectorSettings.G4_LOWGAIN,
+        }
+    )
+
+    class FrameDiscardPolicy(IntEnum):
+        # the values are the same as in slsdet.timingMode so no bidict table is required
+        NO_DISCARD = 0
+        DISCARD_EMPTY_FRAMES = 1
+        DISCARD_PARTIAL_FRAMES = 2
 
     SLS_RECEIVER_PORT = device_property(
         dtype="str",
@@ -129,12 +197,12 @@ class MoenchDetectorControl(Device):
     )
     timing_mode = attribute(
         label="trigger mode",
-        dtype=timingMode,
+        dtype=TimingMode,
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="AUTO_TIMING - internal trigger, TRIGGER_EXPOSURE - external]",
+        doc="[AUTO_TIMING - internal trigger, TRIGGER_EXPOSURE - external]",
     )
     triggers = attribute(
         label="triggers",
@@ -241,7 +309,7 @@ class MoenchDetectorControl(Device):
     settings = attribute(
         display_level=DispLevel.EXPERT,
         label="gain settings",
-        dtype=detectorSettings,
+        dtype=DetectorSettings,
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
         memorized=True,
@@ -267,7 +335,7 @@ class MoenchDetectorControl(Device):
     rx_discardpolicy = attribute(
         display_level=DispLevel.EXPERT,
         label="discard policy",
-        dtype=frameDiscardPolicy,
+        dtype=FrameDiscardPolicy,
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
@@ -435,11 +503,10 @@ class MoenchDetectorControl(Device):
         self.moench_device.findex = value
 
     def read_timing_mode(self):
-        return self.moench_device.timing
+        return self.TimingMode(self.moench_device.timing.value)
 
-    # TODO: use ENUMs instead
     def write_timing_mode(self, value):
-        self.moench_device.timing = value
+        self.moench_device.timing = timingMode(value)
 
     def read_triggers(self):
         return self.moench_device.triggers
@@ -478,27 +545,32 @@ class MoenchDetectorControl(Device):
 
     def read_framemode(self):
         try:
-            framemode = self.FrameMode(self.moench_device.rx_jsonpara["frameMode"])
+            framemode = self.frameMode_bidict.inverse[
+                self.moench_device.rx_jsonpara["frameMode"]
+            ]
         except:
             framemode = self.FrameMode.NO_FRAME_MODE
-            self.error_stream("no framemode set")
         return framemode
 
     def write_framemode(self, value):
-        self.moench_device.rx_jsonpara["frameMode"] = value.value
+        self.moench_device.rx_jsonpara["frameMode"] = self.frameMode_bidict[
+            self.FrameMode(value)
+        ]
 
     def read_detectormode(self):
         try:
-            detectormode = self.DetectorMode(
+            detectormode = self.detectorMode_bidict.inverse[
                 self.moench_device.rx_jsonpara["detectorMode"]
-            )
+            ]
         except:
             detectormode = self.DetectorMode.NO_DETECTOR_MODE
             self.error_stream("no detectormode set")
         return detectormode
 
     def write_detectormode(self, value):
-        self.moench_device.rx_jsonpara["detectorMode"] = value.value
+        self.moench_device.rx_jsonpara["detectorMode"] = self.detectorMode_bidict[
+            self.DetectorMode(value)
+        ]
 
     def read_filewrite(self):
         return self.moench_device.fwrite
@@ -549,10 +621,10 @@ class MoenchDetectorControl(Device):
         self.moench_device.rx_zmqport = value
 
     def read_rx_discardpolicy(self):
-        return self.moench_device.rx_discardpolicy
+        return self.FrameDiscardPolicy(self.moench_device.rx_discardpolicy.value)
 
     def write_rx_discardpolicy(self, value):
-        self.moench_device.rx_discardpolicy = value
+        self.moench_device.rx_discardpolicy = frameDiscardPolicy(value)
 
     def read_rx_framescaught(self):
         return self.moench_device.rx_framescaught
