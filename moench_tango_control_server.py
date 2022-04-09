@@ -9,11 +9,25 @@ import os, sys
 import re
 import computer_setup
 from pathlib import PosixPath
+from enum import Enum
 
 
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
     _last_triggers = ""
+
+    class FrameMode(Enum):
+        RAW = "raw"
+        FRAME = "frame"
+        PEDESTAL = "pedestal"
+        NEWPEDESTAL = "newPedestal"
+        NO_FRAME_MODE = "noFrameMode"
+
+    class DetectorMode(Enum):
+        COUNTING = "counting"
+        ANALOG = "analog"
+        INTERPOLATING = "interpolating"
+        NO_DETECTOR_MODE = "nodDetectorMode"
 
     SLS_RECEIVER_PORT = device_property(
         dtype="str",
@@ -115,12 +129,12 @@ class MoenchDetectorControl(Device):
     )
     timing_mode = attribute(
         label="trigger mode",
-        dtype="str",
+        dtype=timingMode,
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="AUTO - internal trigger, EXT - external]",
+        doc="AUTO_TIMING - internal trigger, TRIGGER_EXPOSURE - external]",
     )
     triggers = attribute(
         label="triggers",
@@ -168,22 +182,22 @@ class MoenchDetectorControl(Device):
         doc="amount of frames made per acquisition",
     )
     framemode = attribute(
-        label="frameMode",
-        dtype="str",
+        label="frame mode",
+        dtype=FrameMode,
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="framemode of detector [raw, frame, pedestal, newPedestal]",
+        doc="framemode of detector [RAW, FRAME, PEDESTAL, NEWPEDESTAL]",
     )
     detectormode = attribute(
-        label="detectorMode",
-        dtype="str",
+        label="detector mode",
+        dtype=DetectorMode,
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="detectorMode [counting, analog, interpolating]",
+        doc="detectorMode [COUNTING, ANALOG, INTERPOLATING]",
     )
     filewrite = attribute(
         label="enable or disable file writing",
@@ -227,7 +241,7 @@ class MoenchDetectorControl(Device):
     settings = attribute(
         display_level=DispLevel.EXPERT,
         label="gain settings",
-        dtype="str",
+        dtype=detectorSettings,
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
         memorized=True,
@@ -253,7 +267,7 @@ class MoenchDetectorControl(Device):
     rx_discardpolicy = attribute(
         display_level=DispLevel.EXPERT,
         label="discard policy",
-        dtype="str",
+        dtype=frameDiscardPolicy,
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
@@ -382,9 +396,9 @@ class MoenchDetectorControl(Device):
             self.delete_device()
             self.info_stream("Unable to start PC")
         self.info_stream("PC is ready")
-        self.device = Moench()
+        self.moench_device = Moench()
         try:
-            st = self.device.rx_status
+            st = self.moench_device.rx_status
             self.info_stream("Current device status: %s" % st)
             self.set_state(DevState.ON)
         except RuntimeError as e:
@@ -394,65 +408,53 @@ class MoenchDetectorControl(Device):
 
     def isWriteAvailable(self, value):
         # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
-        if self.device.status in (runStatus.IDLE, runStatus.WAITING, runStatus.STOPPED):
+        if self.moench_device.status in (
+            runStatus.IDLE,
+            runStatus.WAITING,
+            runStatus.STOPPED,
+        ):
             return True
         return False
 
     def read_exposure(self):
-        return self.device.exptime
+        return self.moench_device.exptime
 
     def write_exposure(self, value):
-        self.device.exptime = value
+        self.moench_device.exptime = value
 
     def read_delay(self):
-        return self.device.delay
+        return self.moench_device.delay
 
     def write_delay(self, value):
-        self.device.delay = value
+        self.moench_device.delay = value
 
     def read_fileindex(self):
-        return self.device.findex
+        return self.moench_device.findex
 
     def write_fileindex(self, value):
-        self.device.findex = value
+        self.moench_device.findex = value
 
     def read_timing_mode(self):
-        if self.device.timing == timingMode.AUTO_TIMING:
-            return "AUTO"
-        elif self.device.timing == timingMode.TRIGGER_EXPOSURE:
-            return "EXT"
-        else:
-            self.info_stream("The timing mode is not assigned correctly.")
+        return self.moench_device.timing
 
     # TODO: use ENUMs instead
     def write_timing_mode(self, value):
-        if type(value) == str:
-            if value.lower() == "auto":
-                self.info_stream("Setting auto timing mode")
-                self._last_triggers = self.read_triggers()
-                self.write_triggers(1)
-                self.device.timing = timingMode.AUTO_TIMING
-            elif value.lower() == "ext":
-                self.info_stream("Setting external timing mode")
-                self.device.timing = timingMode.TRIGGER_EXPOSURE
-                self.triggers = self._last_triggers
-        else:
-            self.info_stream('Timing mode should be "AUTO/EXT" string')
+        self.moench_device.timing = value
 
     def read_triggers(self):
-        return self.device.triggers
+        return self.moench_device.triggers
 
     def write_triggers(self, value):
-        self.device.triggers = value
+        self.moench_device.triggers = value
 
     def read_filename(self):
-        return self.device.fname
+        return self.moench_device.fname
 
     def write_filename(self, value):
-        self.device.fname = value
+        self.moench_device.fname = value
 
     def read_filepath(self):
-        return str(self.device.fpath)
+        return str(self.moench_device.fpath)
 
     def write_filepath(self, value):
         if not os.path.isdir(value):
@@ -464,159 +466,132 @@ class MoenchDetectorControl(Device):
                 self.error_stream(f"os error while creating a dir in {value}")
         if os.path.exists(value) & os.path.isdir(value):
             try:
-                self.device.fpath = value
+                self.moench_device.fpath = value
             except:
                 self.error_stream("not valid filepath")
 
     def read_frames(self):
-        return self.device.frames
+        return self.moench_device.frames
 
     def write_frames(self, value):
-        self.device.frames = value
+        self.moench_device.frames = value
 
     def read_framemode(self):
         try:
-            framemode = self.device.rx_jsonpara["frameMode"]
+            framemode = self.FrameMode(self.moench_device.rx_jsonpara["frameMode"])
         except:
-            framemode = ""
+            framemode = self.FrameMode.NO_FRAME_MODE
             self.error_stream("no framemode set")
         return framemode
 
     def write_framemode(self, value):
-        if type(value) == str:
-            if value in ("raw", "frame", "pedestal", "newPedestal"):
-                self.device.rx_jsonpara["frameMode"] = value
-            else:
-                self.error_stream("not allowed framemode")
-        else:
-            self.error_stream("value must be string")
+        self.moench_device.rx_jsonpara["frameMode"] = value.value
 
     def read_detectormode(self):
         try:
-            detectormode = self.device.rx_jsonpara["detectorMode"]
+            detectormode = self.DetectorMode(
+                self.moench_device.rx_jsonpara["detectorMode"]
+            )
         except:
-            detectormode = ""
+            detectormode = self.DetectorMode.NO_DETECTOR_MODE
             self.error_stream("no detectormode set")
         return detectormode
 
     def write_detectormode(self, value):
-        if type(value) == str:
-            if value in ("counting", "analog", "interpolating"):
-                self.device.rx_jsonpara["detectorMode"] = value
-            else:
-                self.error_stream("not allowed framemode")
-        else:
-            self.error_stream("value must be string")
+        self.moench_device.rx_jsonpara["detectorMode"] = value.value
 
     def read_filewrite(self):
-        return self.device.fwrite
+        return self.moench_device.fwrite
 
     def write_filewrite(self, value):
-        self.device.fwrite = value
+        self.moench_device.fwrite = value
 
     def read_highvoltage(self):
-        return self.device.highvoltage
+        return self.moench_device.highvoltage
 
     def write_highvoltage(self, value):
         try:
-            self.device.highvoltage = value
+            self.moench_device.highvoltage = value
         except RuntimeError:
             self.error_stream("not allowed highvoltage")
 
     def read_period(self):
-        return self.device.period
+        return self.moench_device.period
 
     def write_period(self, value):
-        self.device.period = value
+        self.moench_device.period = value
 
     def read_samples(self):
-        return self.device.samples
+        return self.moench_device.samples
 
     def write_samples(self, value):
-        self.device.samples = value
+        self.moench_device.samples = value
 
     def read_settings(self):
-        return str(self.device.settings)
+        return self.moench_device.settings
 
     def write_settings(self, value):
-        settings_dict = {
-            "G1_HIGHGAIN": 13,
-            "G1_LOWGAIN": 14,
-            "G2_HIGHCAP_HIGHGAIN": 15,
-            "G2_HIGHCAP_LOWGAIN": 16,
-            "G2_LOWCAP_HIGHGAIN": 17,
-            "G2_LOWCAP_LOWGAIN": 18,
-            "G4_HIGHGAIN": 19,
-            "G4_LOWGAIN": 20,
-        }
-        if value in list(settings_dict.keys()):
-            self.device.settings = detectorSettings(settings_dict[value])
+        self.moench_device.settings = value
 
     def read_zmqip(self):
-        return str(self.device.rx_zmqip)
+        return str(self.moench_device.rx_zmqip)
 
     def write_zmqip(self, value):
         if bool(re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", value)):
-            self.device.rx_zmqip = IpAddr(value)
+            self.moench_device.rx_zmqip = IpAddr(value)
         else:
             self.error_stream("not valid ip address")
 
     def read_zmqport(self):
-        return self.device.rx_zmqport
+        return self.moench_device.rx_zmqport
 
     def write_zmqport(self, value):
-        self.device.rx_zmqport = value
+        self.moench_device.rx_zmqport = value
 
     def read_rx_discardpolicy(self):
-        return str(self.device.rx_discardpolicy)
+        return self.moench_device.rx_discardpolicy
 
     def write_rx_discardpolicy(self, value):
-        disard_dict = {
-            "NO_DISCARD": 0,
-            "DISCARD_EMPTY_FRAMES": 1,
-            "DISCARD_PARTIAL_FRAMES": 2,
-        }
-        if value in list(disard_dict.keys()):
-            self.device.rx_discardpolicy = frameDiscardPolicy(disard_dict[value])
+        self.moench_device.rx_discardpolicy = value
 
     def read_rx_framescaught(self):
-        return self.device.rx_framescaught
+        return self.moench_device.rx_framescaught
 
     def write_rx_framescaught(self, value):
         pass
 
     def read_rx_hostname(self):
-        return self.device.rx_hostname
+        return self.moench_device.rx_hostname
 
     def write_rx_hostname(self, value):
-        self.device.rx_hostname = value
+        self.moench_device.rx_hostname = value
 
     def read_rx_tcpport(self):
-        return self.device.rx_tcpport
+        return self.moench_device.rx_tcpport
 
     def write_rx_tcpport(self, value):
-        self.device.rx_tcpport = value
+        self.moench_device.rx_tcpport = value
 
     def read_rx_status(self):
-        return str(self.device.rx_status)
+        return str(self.moench_device.rx_status)
 
     def write_rx_status(self, value):
         pass
 
     def read_rx_zmqstream(self):
-        return self.device.rx_zmqstream
+        return self.moench_device.rx_zmqstream
 
     def write_rx_zmqstream(self, value):
-        self.device.rx_zmqstream = value
+        self.moench_device.rx_zmqstream = value
 
     def read_rx_version(self):
-        return self.device.rx_version
+        return self.moench_device.rx_version
 
     def write_rx_version(self, value):
         pass
 
     def read_firmware_version(self):
-        return self.device.firmwareversion
+        return self.moench_device.firmwareversion
 
     def write_firmware_version(self, value):
         pass
@@ -663,7 +638,7 @@ class MoenchDetectorControl(Device):
         pass
 
     def read_raw_detector_status(self):
-        return str(self.device.status)
+        return str(self.moench_device.status)
 
     def write_raw_detector_status(self):
         pass
