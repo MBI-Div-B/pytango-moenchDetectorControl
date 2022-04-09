@@ -424,6 +424,7 @@ class MoenchDetectorControl(Device):
         else:
             self.info_stream("The timing mode is not assigned correctly.")
 
+    # TODO: use ENUMs instead
     def write_timing_mode(self, value):
         if type(value) == str:
             if value.lower() == "auto":
@@ -620,6 +621,7 @@ class MoenchDetectorControl(Device):
     def write_firmware_version(self, value):
         pass
 
+    # TODO: load the last capture in tango and return it instead of http link
     def read_tiff_fullpath_next(self):
         # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
         savepath = self.read_filepath()
@@ -666,7 +668,6 @@ class MoenchDetectorControl(Device):
     def write_raw_detector_status(self):
         pass
 
-    @command
     def delete_device(self):
         try:
             computer_setup.deactivate_pc(self.ROOT_USERNAME, self.ROOT_PASSWORD)

@@ -21,7 +21,11 @@ class MoenchDetectorAcquire(Device):
         doc="delay before the next connection attempt with control device",
         default_value=2,
     )
-
+    CONTROL_DEVICE_ADDRESS = device_property(
+        dtype="str",
+        doc="address of tango device for proxy",
+        mandatory=True,
+    )
     status_dict = {
         runStatus.IDLE: DevState.ON,
         runStatus.ERROR: DevState.FAULT,
@@ -36,7 +40,7 @@ class MoenchDetectorAcquire(Device):
         Device.init_device(self)
         self.get_device_properties(self.get_device_class())
         attempts_counter = 0
-        self.tango_control_device = DeviceProxy("rsxs/moenchControl/bchip286")
+        self.tango_control_device = DeviceProxy(self.CONTROL_DEVICE_ADDRESS)
         while attempts_counter < self.MAX_ATTEMPTS:
             try:
                 control_state = self.tango_control_device.state()
@@ -106,7 +110,6 @@ class MoenchDetectorAcquire(Device):
     def stop_acquire(self):
         self.device.stop()
 
-    @command
     def delete_device(self):
         Device.delete_device(self)
 
