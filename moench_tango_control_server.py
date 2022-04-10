@@ -1,7 +1,6 @@
 #!/bin/python3
-from this import d
 from numpy import tri
-from tango import AttrWriteType, DevState, DispLevel, GreenMode
+from tango import AttrWriteType, DevState, DispLevel, GreenMode, AttrDataFormat
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -13,11 +12,16 @@ from pathlib import PosixPath
 from enum import Enum, IntEnum
 from bidict import bidict
 import asyncio
+import numpy as np
+import random
+import datetime
+from skimage.io import imread
 
 
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
     _last_triggers = ""
+    _last_image = np.zeros([400, 400], dtype=np.int)
     green_mode = GreenMode.Asyncio
 
     class FrameMode(IntEnum):
@@ -387,6 +391,11 @@ class MoenchDetectorControl(Device):
         dtype="DevState",
         access=AttrWriteType.READ,
     )
+    receiver_status = attribute(
+        label="receiver tango state",
+        dtype="DevState",
+        access=AttrWriteType.READ,
+    )
     rx_zmqstream = attribute(
         display_level=DispLevel.EXPERT,
         label="data streaming via zmq",
@@ -451,8 +460,20 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
     )
 
+    sum_image_last = attribute(
+        display_level=DispLevel.EXPERT,
+        label="sum last image",
+        dtype="DevLong",
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ_WRITE,
+        doc="last summarized 400x400 image from detector",
+    )
+
     def init_device(self):
         Device.init_device(self)
+        self.set_change_event("sum_image_last", True, False)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
         MAX_ATTEMPTS = 5
@@ -675,6 +696,13 @@ class MoenchDetectorControl(Device):
     def write_detector_status(self, value):
         pass
 
+    def read_receiver_status(self):
+        tango_state = self.status_dict.get(self.moench_device.getReceiverStatus()[0])
+        return tango_state
+
+    def write_receiver_status(self, value):
+        pass
+
     def read_rx_zmqstream(self):
         return self.moench_device.rx_zmqstream
 
@@ -693,7 +721,6 @@ class MoenchDetectorControl(Device):
     def write_firmware_version(self, value):
         pass
 
-    # TODO: load the last capture in tango and return it instead of http link
     def read_tiff_fullpath_next(self):
         # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
         savepath = self.read_filepath()
@@ -740,6 +767,12 @@ class MoenchDetectorControl(Device):
     def write_raw_detector_status(self):
         pass
 
+    def read_sum_image_last(self):
+        return self._last_image
+
+    def write_sum_image_last(self, value):
+        pass
+
     def delete_device(self):
         try:
             computer_setup.deactivate_pc(self.ROOT_USERNAME, self.ROOT_PASSWORD)
@@ -763,8 +796,8 @@ class MoenchDetectorControl(Device):
         So if there is no delay after startDetector() and self.get_state() check it's very probable that
         detector will be still in ON mode (even not started to acquire.)
         """
-        time.sleep(0.2)
-        while self.get_state() != DevState.ON:
+        time.sleep(0.5)
+        while self.read_detector_status() != DevState.ON:
             time.sleep(0.1)
         self.moench_device.stopReceiver()
         self.info_stream("stop receiver")
@@ -776,6 +809,21 @@ class MoenchDetectorControl(Device):
         if filewriteEnabled:
             self.write_fileindex(self.read_fileindex() + 1)
         self.write_tiff_fullpath_last(tiff_fullpath_current)
+        loop.run_in_executor(None, self._pending_file)
+        # update sum_image_last here
+
+    def _pending_file(self):
+        c = 0
+        MAX_ATTEMPTS = 15
+        isFileReady = False
+        while not isFileReady and (c < MAX_ATTEMPTS):
+            isFileReady = os.path.isfile(self.read_tiff_fullpath_last())
+            time.sleep(0.5)
+        if isFileReady:
+            self._last_image = imread(self.read_tiff_fullpath_last())
+            self.push_change_event(
+                "sum_image_last", self.read_sum_image_last(), 400, 400
+            )
 
     @command
     async def start_acquire(self):
@@ -786,6 +834,10 @@ class MoenchDetectorControl(Device):
             self.info_stream("Detector is acquiring")
         else:
             self.error_stream("Unable to acquire")
+
+    @command
+    def test_push_sum_img_event(self):
+        self.push_change_event("sum_image_last", self.read_sum_image_last(), 400, 400)
 
     @command
     def stop_acquire(self):
