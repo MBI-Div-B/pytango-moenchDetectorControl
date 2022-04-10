@@ -1,7 +1,7 @@
 #!/bin/python3
 from this import d
 from numpy import tri
-from tango import AttrWriteType, DevState, DispLevel
+from tango import AttrWriteType, DevState, DispLevel, GreenMode
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -12,11 +12,13 @@ import computer_setup
 from pathlib import PosixPath
 from enum import Enum, IntEnum
 from bidict import bidict
+import asyncio
 
 
 class MoenchDetectorControl(Device):
     _tiff_fullpath_last = ""
     _last_triggers = ""
+    green_mode = GreenMode.Asyncio
 
     class FrameMode(IntEnum):
         # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
@@ -67,7 +69,6 @@ class MoenchDetectorControl(Device):
         TRIGGER_EXPOSURE = 1
 
     class DetectorSettings(IntEnum):
-        # TODO: settings enums...
         # [G1_HIGHGAIN, G1_LOWGAIN, G2_HIGHCAP_HIGHGAIN, G2_HIGHCAP_LOWGAIN, G2_LOWCAP_HIGHGAIN, G2_LOWCAP_LOWGAIN, G4_HIGHGAIN, G4_LOWGAIN]
         G1_HIGHGAIN = 0
         G1_LOWGAIN = 1
@@ -90,6 +91,16 @@ class MoenchDetectorControl(Device):
             DetectorSettings.G4_LOWGAIN: detectorSettings.G4_LOWGAIN,
         }
     )
+
+    status_dict = {
+        runStatus.IDLE: DevState.ON,
+        runStatus.ERROR: DevState.FAULT,
+        runStatus.WAITING: DevState.STANDBY,
+        runStatus.RUN_FINISHED: DevState.ON,
+        runStatus.TRANSMITTING: DevState.RUNNING,
+        runStatus.RUNNING: DevState.RUNNING,
+        runStatus.STOPPED: DevState.ON,
+    }
 
     class FrameDiscardPolicy(IntEnum):
         # the values are the same as in slsdet.timingMode so no bidict table is required
@@ -371,6 +382,11 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ,
         fisallowed="isWriteAvailable",
     )
+    detector_status = attribute(
+        label="detector tango state",
+        dtype="DevState",
+        access=AttrWriteType.READ,
+    )
     rx_zmqstream = attribute(
         display_level=DispLevel.EXPERT,
         label="data streaming via zmq",
@@ -600,10 +616,12 @@ class MoenchDetectorControl(Device):
         self.moench_device.samples = value
 
     def read_settings(self):
-        return self.moench_device.settings
+        return self.detectorSettings_bidict.inverse[self.moench_device.settings]
 
     def write_settings(self, value):
-        self.moench_device.settings = value
+        self.moench_device.settings = self.detectorSettings_bidict[
+            self.DetectorSettings(value)
+        ]
 
     def read_zmqip(self):
         return str(self.moench_device.rx_zmqip)
@@ -648,6 +666,13 @@ class MoenchDetectorControl(Device):
         return str(self.moench_device.rx_status)
 
     def write_rx_status(self, value):
+        pass
+
+    def read_detector_status(self):
+        tango_state = self.status_dict.get(self.moench_device.status)
+        return tango_state
+
+    def write_detector_status(self, value):
         pass
 
     def read_rx_zmqstream(self):
@@ -723,6 +748,48 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+
+    def _block_acquire(self):
+        exptime = self.moench_device.exptime
+        frames = self.moench_device.frames
+        self.moench_device.startReceiver()
+        self.info_stream("start receiver")
+        self.moench_device.startDetector()
+        self.info_stream("start detector")
+        # in case detector is stopped we want to leave this section earlier
+        # time.sleep(exptime * frames)
+        """
+        A detector takes a while after startDetector() execution to change its state.
+        So if there is no delay after startDetector() and self.get_state() check it's very probable that
+        detector will be still in ON mode (even not started to acquire.)
+        """
+        time.sleep(0.2)
+        while self.get_state() != DevState.ON:
+            time.sleep(0.1)
+        self.moench_device.stopReceiver()
+        self.info_stream("stop receiver")
+
+    async def _async_acquire(self, loop):
+        tiff_fullpath_current = self.read_tiff_fullpath_next()
+        filewriteEnabled = self.read_filewrite()
+        await loop.run_in_executor(None, self._block_acquire)
+        if filewriteEnabled:
+            self.write_fileindex(self.read_fileindex() + 1)
+        self.write_tiff_fullpath_last(tiff_fullpath_current)
+
+    @command
+    async def start_acquire(self):
+        if self.moench_device.status == runStatus.IDLE:
+            loop = asyncio.get_event_loop()
+            future = loop.create_task(self._async_acquire(loop))
+        elif self.moench_device.status == runStatus.RUNNING:
+            self.info_stream("Detector is acquiring")
+        else:
+            self.error_stream("Unable to acquire")
+
+    @command
+    def stop_acquire(self):
+        self.moench_device.stop()
 
 
 if __name__ == "__main__":
