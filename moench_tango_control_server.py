@@ -293,7 +293,7 @@ class MoenchDetectorControl(Device):
     )
     highvoltage = attribute(
         display_level=DispLevel.EXPERT,
-        label="high voltage on sensor",
+        label="bias voltage on sensor",
         dtype="int",
         unit="V",
         min_value=60,
