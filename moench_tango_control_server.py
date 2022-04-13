@@ -726,7 +726,12 @@ class MoenchDetectorControl(Device):
         savepath = self.read_filepath()
         filename = self.read_filename()
         file_index = self.read_fileindex()
-        postfix = "_ped" if self.read_framemode() in ("pedestal", "newPedestal") else ""
+        postfix = (
+            "_ped"
+            if self.read_framemode()
+            in (self.FrameMode.PEDESTAL, self.FrameMode.NEWPEDESTAL)
+            else ""
+        )
         fullpath = os.path.join(savepath, f"{filename}_{file_index}{postfix}.tiff")
         return fullpath
 
@@ -783,8 +788,6 @@ class MoenchDetectorControl(Device):
             )
 
     def _block_acquire(self):
-        exptime = self.moench_device.exptime
-        frames = self.moench_device.frames
         self.moench_device.startReceiver()
         self.info_stream("start receiver")
         self.moench_device.startDetector()
