@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python3
 from numpy import tri
 from tango import AttrWriteType, DevState, DispLevel, GreenMode, AttrDataFormat
 from tango.server import Device, attribute, command, pipe, device_property
@@ -10,7 +10,6 @@ import re
 import computer_setup
 from pathlib import PosixPath
 from enum import Enum, IntEnum
-from bidict import bidict
 import asyncio
 import numpy as np
 import random
