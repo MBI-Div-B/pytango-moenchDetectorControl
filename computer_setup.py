@@ -14,13 +14,12 @@ def init_pc(
     PROCESSING_TX_IP="192.168.1.118",
     PROCESSING_TX_PORT="50001",
     PROCESSING_CORES="20",
-    CONFIG_PATH_REAL="/home/moench/detector/moench_2021.config",
-    CONFIG_PATH_VIRTUAL="/home/moench/detector/moench_2021_virtual.config",
-    EXECUTABLES_PATH="/opt/slsDetectorPackage/build/bin/",
-    ROOT_USERNAME="dummy_user",
+    CONFIG_PATH_REAL="/opt/moench-slsDetectorGroup/moench03_hardware.config",
+    CONFIG_PATH_VIRTUAL="/opt/moench-slsDetectorGroup/moench03_virtual.config",
+    EXECUTABLES_PATH="/opt/moench-slsDetectorGroup/build/bin/",
     ROOT_PASSWORD="dummy_password",
 ):
-    start_10g_interface(ROOT_USERNAME, ROOT_PASSWORD)
+    start_10g_interface(ROOT_PASSWORD)
     if virtual:
         CONFIG_PATH = CONFIG_PATH_VIRTUAL  # for virtual detector
         subprocess.Popen(
@@ -31,12 +30,12 @@ def init_pc(
         print("configured for virtual detector")
 
     else:
-        CONFIG_PATH = CONFIG_PATH_REAL  # for real (hardware) detector
+        CONFIG_PATH = CONFIG_PATH_REAL  # for  real (hardware) detector
         print("configured for real detector")
     # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
     # configured for moench pc only
     subprocess.Popen(
-        f'su - {ROOT_USERNAME} -c "sudo {EXECUTABLES_PATH}slsReceiver -t {SLS_RECEIVER_PORT}" <<< {ROOT_PASSWORD}',
+        f'sudo -S <<< "{ROOT_PASSWORD}" {EXECUTABLES_PATH}slsReceiver -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
     print("started slsReceicver")
@@ -61,10 +60,9 @@ def init_pc(
     return is_pc_ready()
 
 
-def kill_all_pc_processes(ROOT_USERNAME, ROOT_PASSWORD):
+def kill_all_pc_processes(ROOT_PASSWORD):
     kill_processes_by_name(
         "slsReceiver",
-        root_username=ROOT_USERNAME,
         root_password=ROOT_PASSWORD,
         sudo=True,
     )
@@ -72,8 +70,8 @@ def kill_all_pc_processes(ROOT_USERNAME, ROOT_PASSWORD):
     kill_processes_by_name("moenchDetectorServer_virtual")
 
 
-def deactivate_pc(ROOT_USERNAME, ROOT_PASSWORD):
-    kill_all_pc_processes(ROOT_USERNAME, ROOT_PASSWORD)
+def deactivate_pc(ROOT_PASSWORD):
+    kill_all_pc_processes(ROOT_PASSWORD)
 
 
 def is_sls_running():
@@ -81,7 +79,7 @@ def is_sls_running():
 
 
 def is_zmq_running():
-    return is_process_running("moench04ZmqProcess")
+    return is_process_running("moench03ZmqProcess")
 
 
 def is_pc_ready():
@@ -102,15 +100,13 @@ def is_process_running(name):
         print("Error occurred while process running check")
 
 
-def kill_processes_by_name(
-    name, sudo=False, root_username="root", root_password="pass"
-):
+def kill_processes_by_name(name, root_password="pass"):
     try:
         for line in os.popen("pgrep -f %s" % name):
             pid = int(line)
             if sudo:
                 subprocess.call(
-                    f'su - {root_username} -c "sudo kill -9 {pid}" <<< {root_password}',
+                    f'sudo -S <<< "{root_password}" kill -9 {pid}',
                     shell=True,
                 )
             else:
@@ -119,8 +115,8 @@ def kill_processes_by_name(
         print("Error occurred while killing process")
 
 
-def start_10g_interface(root_username="root", root_password="pass"):
+def start_10g_interface(root_password="pass"):
     subprocess.call(
-        f'su - {root_username} -c "sudo ifup em2" <<< {root_password}',
+        f'sudo -S <<< "{root_password}"  ifup eno2',
         shell=True,
     )
