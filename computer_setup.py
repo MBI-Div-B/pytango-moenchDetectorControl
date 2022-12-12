@@ -64,10 +64,15 @@ def kill_all_pc_processes(ROOT_PASSWORD):
     kill_processes_by_name(
         "slsReceiver",
         root_password=ROOT_PASSWORD,
-        sudo=True,
     )
-    kill_processes_by_name("moench03ZmqProcess")
-    kill_processes_by_name("moenchDetectorServer_virtual")
+    kill_processes_by_name(
+        "moench03ZmqProcess",
+        root_password=ROOT_PASSWORD,
+    )
+    kill_processes_by_name(
+        "moenchDetectorServer_virtual",
+        root_password=ROOT_PASSWORD,
+    )
 
 
 def deactivate_pc(ROOT_PASSWORD):
@@ -100,22 +105,19 @@ def is_process_running(name):
         print("Error occurred while process running check")
 
 
-def kill_processes_by_name(name, root_password="pass"):
+def kill_processes_by_name(name, root_password):
     try:
         for line in os.popen("pgrep -f %s" % name):
             pid = int(line)
-            if sudo:
-                subprocess.call(
-                    f'sudo -S <<< "{root_password}" kill -9 {pid}',
-                    shell=True,
-                )
-            else:
-                os.kill(pid, signal.SIGKILL)
+            subprocess.call(
+                f'sudo -S <<< "{root_password}" kill -9 {pid}',
+                shell=True,
+            )
     except:
         print("Error occurred while killing process")
 
 
-def start_10g_interface(root_password="pass"):
+def start_10g_interface(root_password):
     subprocess.call(
         f'sudo -S <<< "{root_password}"  ifup eno2',
         shell=True,
