@@ -15,6 +15,7 @@ import numpy as np
 import random
 import datetime
 from skimage.io import imread
+from bidict import bidict
 
 
 class MoenchDetectorControl(Device):
