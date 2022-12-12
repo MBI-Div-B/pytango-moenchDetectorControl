@@ -1,6 +1,13 @@
 #!/usr/bin/python3
 from numpy import tri
-from tango import AttrWriteType, DevState, DispLevel, GreenMode, AttrDataFormat
+from tango import (
+    AttrWriteType,
+    DevState,
+    DispLevel,
+    GreenMode,
+    AttrDataFormat,
+    Except,
+)
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
@@ -229,7 +236,6 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         fisallowed="isWriteAvailable",
         memorized=True,
-        hw_memorized=True,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     filepath = attribute(
@@ -238,7 +244,6 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
-        hw_memorized=True,
         doc="dir where data files will be written",
     )
     fileindex = attribute(
@@ -246,7 +251,6 @@ class MoenchDetectorControl(Device):
         dtype="int",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
-        hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
@@ -532,7 +536,14 @@ class MoenchDetectorControl(Device):
         return self.moench_device.findex
 
     def write_fileindex(self, value):
-        self.moench_device.findex = value
+        if self.fileAlreadyExists(self.read_filepath(), self.read_filename(), value):
+            Except.throw_exception(
+                "FileAlreadyExists",
+                f"there is already a file with the file index {value:d}",
+                "write_fileindex",
+            )
+        else:
+            self.moench_device.findex = value
 
     def read_timing_mode(self):
         return self.TimingMode(self.moench_device.timing.value)
@@ -550,7 +561,14 @@ class MoenchDetectorControl(Device):
         return self.moench_device.fname
 
     def write_filename(self, value):
-        self.moench_device.fname = value
+        if self.fileAlreadyExists(self.read_filepath(), value, self.read_fileindex()):
+            Except.throw_exception(
+                "FileAlreadyExists",
+                f"there is already a file with the file name {value} and index {self.read_fileindex():d}",
+                "write_filename",
+            )
+        else:
+            self.moench_device.fname = value
 
     def read_filepath(self):
         return str(self.moench_device.fpath)
@@ -564,10 +582,19 @@ class MoenchDetectorControl(Device):
             except OSError:
                 self.error_stream(f"os error while creating a dir in {value}")
         if os.path.exists(value) & os.path.isdir(value):
-            try:
-                self.moench_device.fpath = value
-            except:
-                self.error_stream("not valid filepath")
+            if self.fileAlreadyExists(
+                value, self.read_filename(), self.read_fileindex()
+            ):
+                Except.throw_exception(
+                    "FileAlreadyExists",
+                    f"there is already a file with the file name {self.read_filename()} and index {self.read_fileindex():d}",
+                    "write_filepath",
+                )
+            else:
+                try:
+                    self.moench_device.fpath = value
+                except:
+                    self.error_stream("not valid filepath")
 
     def read_frames(self):
         return self.moench_device.frames
@@ -781,6 +808,12 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+
+    def fileAlreadyExists(self, savepath, filename, file_index):
+        fullpath_tiff = os.path.join(savepath, f"{filename}_{file_index}.tiff")
+        fullpath_raw = os.path.join(savepath, f"{filename}_d0_f0_{file_index}.raw")
+        alreadyExists = os.path.exists(fullpath_tiff) or os.path.exists(fullpath_raw)
+        return alreadyExists
 
     def _block_acquire(self):
         self.moench_device.startReceiver()
