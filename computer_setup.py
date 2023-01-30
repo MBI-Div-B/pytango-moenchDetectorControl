@@ -9,11 +9,6 @@ from pathlib import PosixPath
 def init_pc(
     virtual=False,
     SLS_RECEIVER_PORT="1954",
-    PROCESSING_RX_IP="192.168.2.200",
-    PROCESSING_RX_PORT="50003",
-    PROCESSING_TX_IP="192.168.1.118",
-    PROCESSING_TX_PORT="50001",
-    PROCESSING_CORES="20",
     CONFIG_PATH_REAL="/opt/moench-slsDetectorGroup/moench03_hardware.config",
     CONFIG_PATH_VIRTUAL="/opt/moench-slsDetectorGroup/moench03_virtual.config",
     EXECUTABLES_PATH="/opt/moench-slsDetectorGroup/build/bin/",
@@ -38,35 +33,18 @@ def init_pc(
         f'sudo -S <<< "{ROOT_PASSWORD}" {EXECUTABLES_PATH}slsReceiver -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
-    print("started slsReceicver")
-    time.sleep(5)
-    subprocess.Popen(
-        [
-            f"{EXECUTABLES_PATH}moench03ZmqProcess",
-            PROCESSING_RX_IP,
-            PROCESSING_RX_PORT,
-            PROCESSING_TX_IP,
-            PROCESSING_TX_PORT,
-            PROCESSING_CORES,
-        ],
-    )
     subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
     time.sleep(5)
     print("Both processses are running")
     if virtual:
         subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
         print("Uploaded the config the 2nd time for virtual")
-    print("Both processses are running")
     return is_pc_ready()
 
 
 def kill_all_pc_processes(ROOT_PASSWORD):
     kill_processes_by_name(
         "slsReceiver",
-        root_password=ROOT_PASSWORD,
-    )
-    kill_processes_by_name(
-        "moench03ZmqProcess",
         root_password=ROOT_PASSWORD,
     )
     kill_processes_by_name(
@@ -83,12 +61,8 @@ def is_sls_running():
     return is_process_running("slsReceiver")
 
 
-def is_zmq_running():
-    return is_process_running("moench03ZmqProcess")
-
-
 def is_pc_ready():
-    if is_sls_running() and is_zmq_running():
+    if is_sls_running():
         return True
     else:
         return False
@@ -119,6 +93,6 @@ def kill_processes_by_name(name, root_password):
 
 def start_10g_interface(root_password):
     subprocess.call(
-        f'sudo -S <<< "{root_password}"  ifup eno2',
+        f'sudo -S <<< "{root_password}" ifup eno2',
         shell=True,
     )

@@ -144,11 +144,6 @@ class MoenchDetectorControl(Device):
         doc="port for 1gbe (lab local network) lane of PC, must match the config",
         default_value="50001",
     )
-    PROCESSING_CORES = device_property(
-        dtype="str",
-        doc="number of cores for zmq on-time processing",
-        default_value="20",
-    )
     CONFIG_PATH_REAL = device_property(
         dtype="str",
         doc="path for the config file for a real detector",
@@ -163,16 +158,6 @@ class MoenchDetectorControl(Device):
         dtype="bool",
         doc="the flag whether a virtual detector need to be used",
         mandatory=True,
-    )
-    HTTP_HOST_ADDRESS = device_property(
-        dtype="str",
-        doc="the ip address of detector pc where the captures can be found",
-        default_value="http://10.6.5.148",
-    )
-    HTTP_ROOT_PATH = device_property(
-        dtype="str",
-        doc="root page for file listing. currently using nginx on moench. check /etc/nginx/nginx.conf",
-        default_value="/files",
     )
     ROOT_PASSWORD = device_property(
         dtype="str",
@@ -281,15 +266,6 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="detectorMode [COUNTING, ANALOG, INTERPOLATING]",
     )
-    filewrite = attribute(
-        label="enable or disable file writing",
-        dtype="bool",
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        fisallowed="isWriteAvailable",
-        doc="turn of/off writing file to disk",
-    )
     highvoltage = attribute(
         display_level=DispLevel.EXPERT,
         label="bias voltage on sensor",
@@ -391,11 +367,6 @@ class MoenchDetectorControl(Device):
         dtype="DevState",
         access=AttrWriteType.READ,
     )
-    receiver_status = attribute(
-        label="receiver tango state",
-        dtype="DevState",
-        access=AttrWriteType.READ,
-    )
     rx_zmqstream = attribute(
         display_level=DispLevel.EXPERT,
         label="data streaming via zmq",
@@ -404,23 +375,6 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="enable/disable streaming via zmq",
     )  # will be further required for preview direct from stream
-    rx_version = attribute(
-        display_level=DispLevel.EXPERT,
-        label="rec. version",
-        dtype="str",
-        access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
-        doc="version of receiver formatatted as [0xYYMMDD]",
-    )
-
-    firmware_version = attribute(
-        display_level=DispLevel.EXPERT,
-        label="det. version",
-        dtype="str",
-        access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
-        doc="version of detector software",
-    )
 
     raw_detector_status = attribute(
         display_level=DispLevel.EXPERT,
@@ -428,47 +382,6 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ,
         doc="raw status of detector",
-    )
-    tiff_fullpath_next = attribute(
-        label="next capture path",
-        dtype="str",
-        access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
-        doc="full path of the next capture",
-    )
-    tiff_fullpath_last = attribute(
-        label="last capture path",
-        dtype="str",
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        doc="full path of the last capture",
-    )
-    tiff_httppath_last = attribute(
-        display_level=DispLevel.EXPERT,
-        label="http path",
-        dtype="str",
-        access=AttrWriteType.READ,
-        doc="full http path for the last capture with file",
-    )
-    tiff_httppath_next = attribute(
-        display_level=DispLevel.EXPERT,
-        label="http path",
-        dtype="str",
-        access=AttrWriteType.READ,
-        doc="full http path for the next capture with file",
-        fisallowed="isWriteAvailable",
-    )
-
-    sum_image_last = attribute(
-        display_level=DispLevel.EXPERT,
-        label="sum last image",
-        dtype="DevLong",
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
-        doc="last summarized 400x400 image from detector",
     )
 
     def init_device(self):
@@ -483,11 +396,6 @@ class MoenchDetectorControl(Device):
         computer_setup.init_pc(
             virtual=self.IS_VIRTUAL_DETECTOR,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
-            PROCESSING_RX_IP=self.PROCESSING_RX_IP,
-            PROCESSING_RX_PORT=self.PROCESSING_RX_PORT,
-            PROCESSING_TX_IP=self.PROCESSING_TX_IP,
-            PROCESSING_TX_PORT=self.PROCESSING_TX_PORT,
-            PROCESSING_CORES=self.PROCESSING_CORES,
             CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
             CONFIG_PATH_VIRTUAL=self.CONFIG_PATH_VIRTUAL,
             EXECUTABLES_PATH=self.EXECUTABLES_PATH,
@@ -631,12 +539,6 @@ class MoenchDetectorControl(Device):
             self.DetectorMode(value)
         ]
 
-    def read_filewrite(self):
-        return self.moench_device.fwrite
-
-    def write_filewrite(self, value):
-        self.moench_device.fwrite = value
-
     def read_highvoltage(self):
         return self.moench_device.highvoltage
 
@@ -718,74 +620,16 @@ class MoenchDetectorControl(Device):
     def write_detector_status(self, value):
         pass
 
-    def read_receiver_status(self):
-        tango_state = self.status_dict.get(self.moench_device.getReceiverStatus()[0])
-        return tango_state
-
-    def write_receiver_status(self, value):
-        pass
-
     def read_rx_zmqstream(self):
         return self.moench_device.rx_zmqstream
 
     def write_rx_zmqstream(self, value):
         self.moench_device.rx_zmqstream = value
 
-    def read_rx_version(self):
-        return self.moench_device.rx_version
-
-    def write_rx_version(self, value):
-        pass
-
     def read_firmware_version(self):
         return self.moench_device.firmwareversion
 
     def write_firmware_version(self, value):
-        pass
-
-    def read_tiff_fullpath_next(self):
-        # [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw"
-        savepath = self.read_filepath()
-        filename = self.read_filename()
-        file_index = self.read_fileindex()
-        postfix = (
-            "_ped"
-            if self.read_framemode()
-            in (self.FrameMode.PEDESTAL, self.FrameMode.NEWPEDESTAL)
-            else ""
-        )
-        fullpath = os.path.join(savepath, f"{filename}_{file_index}{postfix}.tiff")
-        return fullpath
-
-    def write_tiff_fullpath_next(self, value):
-        pass
-
-    def read_tiff_fullpath_last(self):
-        return self._tiff_fullpath_last
-
-    def write_tiff_fullpath_last(self, value):
-        self._tiff_fullpath_last = value
-
-    def read_tiff_httppath_last(self):
-        http_prefix = self.HTTP_HOST_ADDRESS
-        web_prefix = self.HTTP_ROOT_PATH
-        http_fullpath = http_prefix + web_prefix + self._tiff_fullpath_last
-        return http_fullpath
-
-    def write_tiff_httppath_next(self, value):
-        pass
-
-    def read_tiff_httppath_next(self):
-        http_prefix = self.HTTP_HOST_ADDRESS
-        web_prefix = self.HTTP_ROOT_PATH
-        filename = self.read_filename()
-        file_index = self.read_fileindex()
-        savepath = self.read_filepath()
-        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
-        http_fullpath = http_prefix + web_prefix + fullpath
-        return http_fullpath
-
-    def write_tiff_httppath_last(self, value):
         pass
 
     def read_raw_detector_status(self):
@@ -834,27 +678,8 @@ class MoenchDetectorControl(Device):
         self.info_stream("stop receiver")
 
     async def _async_acquire(self, loop):
-        tiff_fullpath_current = self.read_tiff_fullpath_next()
-        filewriteEnabled = self.read_filewrite()
         await loop.run_in_executor(None, self._block_acquire)
-        if filewriteEnabled:
-            self.write_fileindex(self.read_fileindex() + 1)
-        self.write_tiff_fullpath_last(tiff_fullpath_current)
-        loop.run_in_executor(None, self._pending_file)
         # update sum_image_last here
-
-    def _pending_file(self):
-        c = 0
-        MAX_ATTEMPTS = 15
-        isFileReady = False
-        while not isFileReady and (c < MAX_ATTEMPTS):
-            isFileReady = os.path.isfile(self.read_tiff_fullpath_last())
-            time.sleep(0.5)
-        if isFileReady:
-            self._last_image = imread(self.read_tiff_fullpath_last())
-            self.push_change_event(
-                "sum_image_last", self.read_sum_image_last(), 400, 400
-            )
 
     @command
     async def start_acquire(self):
@@ -865,10 +690,6 @@ class MoenchDetectorControl(Device):
             self.info_stream("Detector is acquiring")
         else:
             self.error_stream("Unable to acquire")
-
-    @command
-    def test_push_sum_img_event(self):
-        self.push_change_event("sum_image_last", self.read_sum_image_last(), 400, 400)
 
     @command
     def stop_acquire(self):
