@@ -7,6 +7,7 @@ from tango import (
     GreenMode,
     AttrDataFormat,
     Except,
+    DeviceProxy,
 )
 from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
@@ -26,53 +27,8 @@ from bidict import bidict
 
 
 class MoenchDetectorControl(Device):
-    _tiff_fullpath_last = ""
     _last_triggers = ""
-    _last_image = np.zeros([400, 400], dtype=np.int)
     green_mode = GreenMode.Asyncio
-
-    class FrameMode(IntEnum):
-        # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
-        # RAW = "raw"
-        # FRAME = "frame"
-        # PEDESTAL = "pedestal"
-        # NEWPEDESTAL = "newPedestal"
-        # NO_FRAME_MODE = "noFrameMode"
-        RAW = 0
-        FRAME = 1
-        PEDESTAL = 2
-        NEWPEDESTAL = 3
-        NO_FRAME_MODE = 4
-
-    frameMode_bidict = bidict(
-        {
-            FrameMode.RAW: "raw",
-            FrameMode.FRAME: "frame",
-            FrameMode.PEDESTAL: "pedestal",
-            FrameMode.NEWPEDESTAL: "newPedestal",
-            FrameMode.NO_FRAME_MODE: "noFrameMode",
-        }
-    )
-
-    class DetectorMode(IntEnum):
-        # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
-        # COUNTING = "counting"
-        # ANALOG = "analog"
-        # INTERPOLATING = "interpolating"
-        # NO_DETECTOR_MODE = "noDetectorMode"
-        COUNTING = 0
-        ANALOG = 1
-        INTERPOLATING = 2
-        NO_DETECTOR_MODE = 3
-
-    detectorMode_bidict = bidict(
-        {
-            DetectorMode.COUNTING: "counting",
-            DetectorMode.ANALOG: "analog",
-            DetectorMode.INTERPOLATING: "interpolating",
-            DetectorMode.NO_DETECTOR_MODE: "noDetectorMode",
-        }
-    )
 
     class TimingMode(IntEnum):
         # the values are the same as in slsdet.timingMode so no bidict table is required
@@ -169,6 +125,11 @@ class MoenchDetectorControl(Device):
         doc="path of all moench sls executables",
         default_value="/opt/slsDetectorPackage/build/bin/",
     )
+    ZMQ_SERVER_DEVICE = device_property(
+        dtype=str,
+        doc="TangoDS address of zmq server",
+        default_value="rsxs/moenchZmqServer/bchip286",
+    )
 
     exposure = attribute(
         label="exposure",
@@ -248,24 +209,6 @@ class MoenchDetectorControl(Device):
         hw_memorized=True,
         doc="amount of frames made per acquisition",
     )
-    framemode = attribute(
-        label="frame mode",
-        dtype=FrameMode,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        fisallowed="isWriteAvailable",
-        doc="framemode of detector [RAW, FRAME, PEDESTAL, NEWPEDESTAL]",
-    )
-    detectormode = attribute(
-        label="detector mode",
-        dtype=DetectorMode,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        fisallowed="isWriteAvailable",
-        doc="detectorMode [COUNTING, ANALOG, INTERPOLATING]",
-    )
     highvoltage = attribute(
         display_level=DispLevel.EXPERT,
         label="bias voltage on sensor",
@@ -288,14 +231,6 @@ class MoenchDetectorControl(Device):
         hw_memorized=True,
         fisallowed="isWriteAvailable",
         doc="period between acquisitions",
-    )
-    samples = attribute(
-        display_level=DispLevel.EXPERT,
-        label="samples amount",
-        dtype="int",
-        access=AttrWriteType.READ_WRITE,
-        fisallowed="isWriteAvailable",
-        doc="in analog mode only",
     )
     settings = attribute(
         display_level=DispLevel.EXPERT,
@@ -331,14 +266,6 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="discard policy of corrupted frames [NO_DISCARD/DISCARD_EMPTY_FRAMES/DISCARD_PARTIAL_FRAMES]",
     )  # converted from enums
-    rx_framescaught = attribute(
-        display_level=DispLevel.EXPERT,
-        label="frames caught",
-        dtype="int",
-        access=AttrWriteType.READ,
-        fisallowed="isWriteAvailable",
-        doc="number of frames which were successfully transferred",
-    )  # need to be checked, here should be a list of ints
     rx_hostname = attribute(
         display_level=DispLevel.EXPERT,
         label="receiver hostname",
@@ -386,9 +313,9 @@ class MoenchDetectorControl(Device):
 
     def init_device(self):
         Device.init_device(self)
-        self.set_change_event("sum_image_last", True, False)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
+        self.zmq_tango_device = DeviceProxy(self.ZMQ_SERVER_DEVICE)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         computer_setup.kill_all_pc_processes(self.ROOT_PASSWORD)
@@ -452,6 +379,7 @@ class MoenchDetectorControl(Device):
             )
         else:
             self.moench_device.findex = value
+            self.zmq_tango_device.file_index = value
 
     def read_timing_mode(self):
         return self.TimingMode(self.moench_device.timing.value)
@@ -477,6 +405,7 @@ class MoenchDetectorControl(Device):
             )
         else:
             self.moench_device.fname = value
+            self.zmq_tango_device.filename = value
 
     def read_filepath(self):
         return str(self.moench_device.fpath)
@@ -501,6 +430,7 @@ class MoenchDetectorControl(Device):
             else:
                 try:
                     self.moench_device.fpath = value
+                    self.zmq_tango_device.filepath = value
                 except:
                     self.error_stream("not valid filepath")
 
@@ -509,35 +439,6 @@ class MoenchDetectorControl(Device):
 
     def write_frames(self, value):
         self.moench_device.frames = value
-
-    def read_framemode(self):
-        try:
-            framemode = self.frameMode_bidict.inverse[
-                self.moench_device.rx_jsonpara["frameMode"]
-            ]
-        except:
-            framemode = self.FrameMode.NO_FRAME_MODE
-        return framemode
-
-    def write_framemode(self, value):
-        self.moench_device.rx_jsonpara["frameMode"] = self.frameMode_bidict[
-            self.FrameMode(value)
-        ]
-
-    def read_detectormode(self):
-        try:
-            detectormode = self.detectorMode_bidict.inverse[
-                self.moench_device.rx_jsonpara["detectorMode"]
-            ]
-        except:
-            detectormode = self.DetectorMode.NO_DETECTOR_MODE
-            self.error_stream("no detectormode set")
-        return detectormode
-
-    def write_detectormode(self, value):
-        self.moench_device.rx_jsonpara["detectorMode"] = self.detectorMode_bidict[
-            self.DetectorMode(value)
-        ]
 
     def read_highvoltage(self):
         return self.moench_device.highvoltage
@@ -553,12 +454,6 @@ class MoenchDetectorControl(Device):
 
     def write_period(self, value):
         self.moench_device.period = value
-
-    def read_samples(self):
-        return self.moench_device.samples
-
-    def write_samples(self, value):
-        self.moench_device.samples = value
 
     def read_settings(self):
         return self.detectorSettings_bidict.inverse[self.moench_device.settings]
@@ -588,12 +483,6 @@ class MoenchDetectorControl(Device):
 
     def write_rx_discardpolicy(self, value):
         self.moench_device.rx_discardpolicy = frameDiscardPolicy(value)
-
-    def read_rx_framescaught(self):
-        return self.moench_device.rx_framescaught
-
-    def write_rx_framescaught(self, value):
-        pass
 
     def read_rx_hostname(self):
         return self.moench_device.rx_hostname
@@ -626,22 +515,10 @@ class MoenchDetectorControl(Device):
     def write_rx_zmqstream(self, value):
         self.moench_device.rx_zmqstream = value
 
-    def read_firmware_version(self):
-        return self.moench_device.firmwareversion
-
-    def write_firmware_version(self, value):
-        pass
-
     def read_raw_detector_status(self):
         return str(self.moench_device.status)
 
     def write_raw_detector_status(self):
-        pass
-
-    def read_sum_image_last(self):
-        return self._last_image
-
-    def write_sum_image_last(self, value):
         pass
 
     def delete_device(self):
@@ -660,12 +537,10 @@ class MoenchDetectorControl(Device):
         return alreadyExists
 
     def _block_acquire(self):
-        self.moench_device.startReceiver()
+        self.zmq_tango_device.start_receiver()
         self.info_stream("start receiver")
         self.moench_device.startDetector()
         self.info_stream("start detector")
-        # in case detector is stopped we want to leave this section earlier
-        # time.sleep(exptime * frames)
         """
         A detector takes a while after startDetector() execution to change its state.
         So if there is no delay after startDetector() and self.get_state() check it's very probable that
@@ -674,7 +549,7 @@ class MoenchDetectorControl(Device):
         time.sleep(0.5)
         while self.read_detector_status() != DevState.ON:
             time.sleep(0.1)
-        self.moench_device.stopReceiver()
+        self.zmq_tango_device.stop_receiver()
         self.info_stream("stop receiver")
 
     async def _async_acquire(self, loop):
@@ -693,7 +568,8 @@ class MoenchDetectorControl(Device):
 
     @command
     def stop_acquire(self):
-        self.moench_device.stop()
+        self.moench_device.stopDetector()
+        self.zmq_tango_device.stop_receiver()
 
 
 if __name__ == "__main__":
