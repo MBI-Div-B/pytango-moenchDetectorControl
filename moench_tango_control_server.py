@@ -27,7 +27,6 @@ from bidict import bidict
 
 
 class MoenchDetectorControl(Device):
-    _last_triggers = ""
     green_mode = GreenMode.Asyncio
 
     class TimingMode(IntEnum):
@@ -176,30 +175,6 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="number of triggers for an acquire session",
     )
-    filename = attribute(
-        label="filename",
-        dtype="str",
-        access=AttrWriteType.READ_WRITE,
-        fisallowed="isWriteAvailable",
-        memorized=True,
-        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
-    )
-    filepath = attribute(
-        label="filepath",
-        dtype="str",
-        fisallowed="isWriteAvailable",
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        doc="dir where data files will be written",
-    )
-    fileindex = attribute(
-        label="file_index",
-        dtype="int",
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        fisallowed="isWriteAvailable",
-        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
-    )
     frames = attribute(
         label="number of frames",
         dtype="int",
@@ -347,13 +322,11 @@ class MoenchDetectorControl(Device):
 
     def isWriteAvailable(self, value):
         # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
-        if self.moench_device.status in (
+        return self.moench_device.status in (
             runStatus.IDLE,
             runStatus.WAITING,
             runStatus.STOPPED,
-        ):
-            return True
-        return False
+        )
 
     def read_exposure(self):
         return self.moench_device.exptime
@@ -366,20 +339,6 @@ class MoenchDetectorControl(Device):
 
     def write_delay(self, value):
         self.moench_device.delay = value
-
-    def read_fileindex(self):
-        return self.moench_device.findex
-
-    def write_fileindex(self, value):
-        if self.fileAlreadyExists(self.read_filepath(), self.read_filename(), value):
-            Except.throw_exception(
-                "FileAlreadyExists",
-                f"there is already a file with the file index {value:d}",
-                "write_fileindex",
-            )
-        else:
-            self.moench_device.findex = value
-            self.zmq_tango_device.file_index = value
 
     def read_timing_mode(self):
         return self.TimingMode(self.moench_device.timing.value)
@@ -395,44 +354,6 @@ class MoenchDetectorControl(Device):
 
     def read_filename(self):
         return self.moench_device.fname
-
-    def write_filename(self, value):
-        if self.fileAlreadyExists(self.read_filepath(), value, self.read_fileindex()):
-            Except.throw_exception(
-                "FileAlreadyExists",
-                f"there is already a file with the file name {value} and index {self.read_fileindex():d}",
-                "write_filename",
-            )
-        else:
-            self.moench_device.fname = value
-            self.zmq_tango_device.filename = value
-
-    def read_filepath(self):
-        return str(self.moench_device.fpath)
-
-    def write_filepath(self, value):
-        if not os.path.isdir(value):
-            try:
-                os.makedirs(value)
-            except PermissionError:
-                self.error_stream(f"no permission to create a directory in {value}")
-            except OSError:
-                self.error_stream(f"os error while creating a dir in {value}")
-        if os.path.exists(value) & os.path.isdir(value):
-            if self.fileAlreadyExists(
-                value, self.read_filename(), self.read_fileindex()
-            ):
-                Except.throw_exception(
-                    "FileAlreadyExists",
-                    f"there is already a file with the file name {self.read_filename()} and index {self.read_fileindex():d}",
-                    "write_filepath",
-                )
-            else:
-                try:
-                    self.moench_device.fpath = value
-                    self.zmq_tango_device.filepath = value
-                except:
-                    self.error_stream("not valid filepath")
 
     def read_frames(self):
         return self.moench_device.frames
@@ -529,15 +450,9 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
-
-    def fileAlreadyExists(self, savepath, filename, file_index):
-        fullpath_tiff = os.path.join(savepath, f"{filename}_{file_index}.tiff")
-        fullpath_raw = os.path.join(savepath, f"{filename}_d0_f0_{file_index}.raw")
-        alreadyExists = os.path.exists(fullpath_tiff) or os.path.exists(fullpath_raw)
-        return alreadyExists
-
     def _block_acquire(self):
         self.zmq_tango_device.start_receiver()
+        self.moench_device.startReceiver()
         self.info_stream("start receiver")
         self.moench_device.startDetector()
         self.info_stream("start detector")
@@ -549,6 +464,7 @@ class MoenchDetectorControl(Device):
         time.sleep(0.5)
         while self.read_detector_status() != DevState.ON:
             time.sleep(0.1)
+        self.moench_device.stopReceiver()
         self.zmq_tango_device.stop_receiver()
         self.info_stream("stop receiver")
 
