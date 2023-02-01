@@ -450,6 +450,7 @@ class MoenchDetectorControl(Device):
             self.info_stream(
                 "Unable to kill slsReceiver or zmq socket. Please kill it manually."
             )
+    
     def _block_acquire(self):
         self.zmq_tango_device.start_receiver()
         self.moench_device.startReceiver()
