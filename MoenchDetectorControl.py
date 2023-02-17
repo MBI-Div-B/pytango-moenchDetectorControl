@@ -462,7 +462,7 @@ class MoenchDetectorControl(Device):
         So if there is no delay after startDetector() and self.get_state() check it's very probable that
         detector will be still in ON mode (even not started to acquire.)
         """
-        time.sleep(0.5)
+        time.sleep(0.1)
         while self.read_detector_status() != DevState.ON:
             time.sleep(0.1)
         self.moench_device.stopReceiver()
