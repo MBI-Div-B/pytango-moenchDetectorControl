@@ -11,15 +11,16 @@ from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
 import time
-import os, sys
 import re
-import computer_setup
-from pathlib import PosixPath
-from enum import Enum, IntEnum
+from .computer_setup import (
+    init_pc,
+    kill_all_pc_processes,
+    is_sls_running,
+    deactivate_pc,
+)
+from enum import IntEnum
 import asyncio
 import numpy as np
-import random
-import datetime
 from bidict import bidict
 
 
@@ -290,9 +291,9 @@ class MoenchDetectorControl(Device):
         self.zmq_tango_device = DeviceProxy(self.ZMQ_SERVER_DEVICE)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
-        computer_setup.kill_all_pc_processes(self.ROOT_PASSWORD)
+        kill_all_pc_processes(self.ROOT_PASSWORD)
         time.sleep(3)
-        computer_setup.init_pc(
+        init_pc(
             virtual=self.IS_VIRTUAL_DETECTOR,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
             CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
@@ -300,10 +301,10 @@ class MoenchDetectorControl(Device):
             VIRTUAL_DETECTOR_BIN=self.VIRTUAL_DETECTOR_BIN,
             ROOT_PASSWORD=self.ROOT_PASSWORD,
         )
-        while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
+        while not is_sls_running() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
             self.attempts_counter += 1
-        if not computer_setup.is_pc_ready:
+        if not is_sls_running():
             self.delete_device()
             self.info_stream("Unable to start PC")
         self.info_stream("PC is ready")
@@ -441,7 +442,7 @@ class MoenchDetectorControl(Device):
 
     def delete_device(self):
         try:
-            computer_setup.deactivate_pc(self.ROOT_PASSWORD)
+            deactivate_pc(self.ROOT_PASSWORD)
             self.info_stream("SlsReceiver process was killed.")
         except Exception:
             self.info_stream("Unable to kill slsReceiver. Please kill it manually.")

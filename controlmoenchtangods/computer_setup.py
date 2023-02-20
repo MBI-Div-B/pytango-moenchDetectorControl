@@ -1,8 +1,6 @@
 import subprocess
 import time
-import os, socket, sys
-import re
-import signal
+import os
 from pathlib import PosixPath
 
 
@@ -30,17 +28,19 @@ def init_pc(
     # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
     # configured for moench pc only
     print("starting slsReceiver instance")
+    print("change")
     subprocess.Popen(
-        f'sudo -S <<< "{ROOT_PASSWORD}" slsReceiver -t {SLS_RECEIVER_PORT}',
+        f'sudo -S <<< "{ROOT_PASSWORD}" $(which slsReceiver) -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
+    print("started slsReceiver")
     print(f"Loading config {CONFIG_PATH} to the detector")
-    subprocess.call([f"sls_detector_put", "config", CONFIG_PATH])
+    subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
     time.sleep(2)
     print("Setup is ready")
     # otherwise it doesn't work for virtual detector
     if virtual:
-        subprocess.call(["sls_detector_put", "config", CONFIG_PATH])
+        subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
         print("Uploaded the config the 2nd time for virtual.")
     return is_sls_running()
 
@@ -88,7 +88,7 @@ def kill_processes_by_name(name, root_password):
 
 
 def start_10g_interface(root_password):
-    subprocess.call(
+    subprocess.Popen(
         f'sudo -S <<< "{root_password}" ifup eno2',
         shell=True,
     )
