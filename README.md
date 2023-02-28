@@ -1,4 +1,10 @@
 # pytango-moenchDetectorControl
+![conda version](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/version.svg)
+![last updated](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/latest_release_date.svg
+)
+![platforms](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/platforms.svg
+)
+
 ## Description
 
 This device connects to MOENCH detector and allows to control the state of the detector.
