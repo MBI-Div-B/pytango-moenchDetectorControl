@@ -1,24 +1,22 @@
 import subprocess
 import time
-import os, socket, sys
-import re
-import signal
+import os
 from pathlib import PosixPath
 
 
 def init_pc(
     virtual=False,
     SLS_RECEIVER_PORT="1954",
+    VIRTUAL_DETECTOR_BIN="/opt/moench-slsDetectorGroup/build/bin/moenchDetectorServer_virtual",
     CONFIG_PATH_REAL="/opt/moench-slsDetectorGroup/moench03_hardware.config",
     CONFIG_PATH_VIRTUAL="/opt/moench-slsDetectorGroup/moench03_virtual.config",
-    EXECUTABLES_PATH="/opt/moench-slsDetectorGroup/build/bin/",
     ROOT_PASSWORD="dummy_password",
 ):
     start_10g_interface(ROOT_PASSWORD)
     if virtual:
         CONFIG_PATH = CONFIG_PATH_VIRTUAL  # for virtual detector
         subprocess.Popen(
-            f"{EXECUTABLES_PATH}moenchDetectorServer_virtual",
+            VIRTUAL_DETECTOR_BIN,
             shell=False,
         )
         time.sleep(5)
@@ -29,17 +27,22 @@ def init_pc(
         print("configured for real detector")
     # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
     # configured for moench pc only
+    print("starting slsReceiver instance")
+    print("change")
     subprocess.Popen(
-        f'sudo -S <<< "{ROOT_PASSWORD}" {EXECUTABLES_PATH}slsReceiver -t {SLS_RECEIVER_PORT}',
+        f'sudo -S <<< "{ROOT_PASSWORD}" $(which slsReceiver) -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
-    subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
-    time.sleep(5)
-    print("Both processses are running")
+    print("started slsReceiver")
+    print(f"Loading config {CONFIG_PATH} to the detector")
+    subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
+    time.sleep(2)
+    print("Setup is ready")
+    # otherwise it doesn't work for virtual detector
     if virtual:
-        subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
-        print("Uploaded the config the 2nd time for virtual")
-    return is_pc_ready()
+        subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
+        print("Uploaded the config the 2nd time for virtual.")
+    return is_sls_running()
 
 
 def kill_all_pc_processes(ROOT_PASSWORD):
@@ -59,13 +62,6 @@ def deactivate_pc(ROOT_PASSWORD):
 
 def is_sls_running():
     return is_process_running("slsReceiver")
-
-
-def is_pc_ready():
-    if is_sls_running():
-        return True
-    else:
-        return False
 
 
 def is_process_running(name):
@@ -92,7 +88,7 @@ def kill_processes_by_name(name, root_password):
 
 
 def start_10g_interface(root_password):
-    subprocess.call(
+    subprocess.Popen(
         f'sudo -S <<< "{root_password}" ifup eno2',
         shell=True,
     )

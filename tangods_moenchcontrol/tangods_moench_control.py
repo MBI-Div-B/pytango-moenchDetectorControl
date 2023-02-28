@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-from numpy import tri
 from tango import (
     AttrWriteType,
     DevState,
@@ -13,16 +11,16 @@ from tango.server import Device, attribute, command, pipe, device_property
 from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 from _slsdet import IpAddr
 import time
-import os, sys
 import re
-import computer_setup
-from pathlib import PosixPath
-from enum import Enum, IntEnum
+from .computer_setup import (
+    init_pc,
+    kill_all_pc_processes,
+    is_sls_running,
+    deactivate_pc,
+)
+from enum import IntEnum
 import asyncio
 import numpy as np
-import random
-import datetime
-from skimage.io import imread
 from bidict import bidict
 
 
@@ -119,10 +117,10 @@ class MoenchDetectorControl(Device):
         doc="password of specified root user. required since slsReceiver should be started with root privileges",
         mandatory=True,
     )
-    EXECUTABLES_PATH = device_property(
+    VIRTUAL_DETECTOR_BIN = device_property(
         dtype="str",
-        doc="path of all moench sls executables",
-        default_value="/opt/slsDetectorPackage/build/bin/",
+        doc="path for virtualDetector executable",
+        default_value="/opt/moench-slsDetectorGroup/build/bin/moenchDetectorServer_virtual",
     )
     ZMQ_SERVER_DEVICE = device_property(
         dtype=str,
@@ -293,20 +291,20 @@ class MoenchDetectorControl(Device):
         self.zmq_tango_device = DeviceProxy(self.ZMQ_SERVER_DEVICE)
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
-        computer_setup.kill_all_pc_processes(self.ROOT_PASSWORD)
+        kill_all_pc_processes(self.ROOT_PASSWORD)
         time.sleep(3)
-        computer_setup.init_pc(
+        init_pc(
             virtual=self.IS_VIRTUAL_DETECTOR,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
             CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
             CONFIG_PATH_VIRTUAL=self.CONFIG_PATH_VIRTUAL,
-            EXECUTABLES_PATH=self.EXECUTABLES_PATH,
+            VIRTUAL_DETECTOR_BIN=self.VIRTUAL_DETECTOR_BIN,
             ROOT_PASSWORD=self.ROOT_PASSWORD,
         )
-        while not computer_setup.is_pc_ready() and self.attempts_counter < MAX_ATTEMPTS:
+        while not is_sls_running() and self.attempts_counter < MAX_ATTEMPTS:
             time.sleep(0.5)
             self.attempts_counter += 1
-        if not computer_setup.is_pc_ready:
+        if not is_sls_running():
             self.delete_device()
             self.info_stream("Unable to start PC")
         self.info_stream("PC is ready")
@@ -444,13 +442,11 @@ class MoenchDetectorControl(Device):
 
     def delete_device(self):
         try:
-            computer_setup.deactivate_pc(self.ROOT_PASSWORD)
-            self.info_stream("SlsReceiver or zmq socket processes were killed.")
+            deactivate_pc(self.ROOT_PASSWORD)
+            self.info_stream("SlsReceiver process was killed.")
         except Exception:
-            self.info_stream(
-                "Unable to kill slsReceiver or zmq socket. Please kill it manually."
-            )
-    
+            self.info_stream("Unable to kill slsReceiver. Please kill it manually.")
+
     def _block_acquire(self):
         self.zmq_tango_device.start_receiver()
         self.moench_device.startReceiver()
@@ -487,7 +483,3 @@ class MoenchDetectorControl(Device):
     def stop_acquire(self):
         self.moench_device.stopDetector()
         self.zmq_tango_device.stop_receiver()
-
-
-if __name__ == "__main__":
-    MoenchDetectorControl.run_server()

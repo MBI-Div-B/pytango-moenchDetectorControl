@@ -1,0 +1,33 @@
+{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+
+package:
+  name: tangods_moenchcontrol
+  version: {{ data.get('version') }}
+
+source:
+  path: ../
+build:
+  entry_points:
+    - MoenchDetectorControl = tangods_moenchcontrol:main
+  script: "{{ PYTHON }} -m pip install . -vv"
+  number: 0
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python>=3.10
+    - pytango>=9.3.6
+    - slsdetlib=2022.2.3.dev0
+    - slsdet=2022.2.3.dev0
+    - bidict>=0.22.1
+    - numpy>=1.24.1
+
+about:
+  home: https://github.com/MBI-Div-B/pytango-moenchDetectorControl
+  license: MIT
+  summary: "tangoDS control for PSI moench detector"
+  description: control server for a moench detector with tango DeviceServer
+  dev_url: https://github.com/MBI-Div-B/pytango-moenchDetectorControl
+  doc_url: https://github.com/MBI-Div-B/pytango-moenchDetectorControl/blob/main/README.md
+
