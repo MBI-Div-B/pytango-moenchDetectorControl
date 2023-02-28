@@ -1,14 +1,14 @@
 {% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
 
 package:
-  name: controlmoenchtangods
+  name: tangods_moenchcontrol
   version: {{ data.get('version') }}
 
 source:
   path: ../
 build:
   entry_points:
-    - MoenchDetectorControl = controlmoenchtangods:main
+    - MoenchDetectorControl = tangods_moenchcontrol:main
   script: "{{ PYTHON }} -m pip install . -vv"
   number: 0
 requirements:
@@ -17,10 +17,10 @@ requirements:
     - setuptools
   run:
     - python>=3.10
-    - pytango>=9.3.6
-    - slsdetlib=2022.2.3.dev0
-    - slsdet=2022.2.3.dev0
-    - bidict>=0.22.1
+    - conda-forge::pytango>=9.3.6
+    - slsdetectorgroup::slsdetlib=2022.2.3.dev0
+    - slsdetectorgroup::slsdet=2022.2.3.dev0
+    - conda-forge::bidict>=0.22.1
     - numpy>=1.24.1
 
 about:
