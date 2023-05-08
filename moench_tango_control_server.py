@@ -164,16 +164,6 @@ class MoenchDetectorControl(Device):
         doc="the flag whether a virtual detector need to be used",
         mandatory=True,
     )
-    HTTP_HOST_ADDRESS = device_property(
-        dtype="str",
-        doc="the ip address of detector pc where the captures can be found",
-        default_value="http://10.6.5.148",
-    )
-    HTTP_ROOT_PATH = device_property(
-        dtype="str",
-        doc="root page for file listing. currently using nginx on moench. check /etc/nginx/nginx.conf",
-        default_value="/files",
-    )
     ROOT_PASSWORD = device_property(
         dtype="str",
         doc="password of specified root user. required since slsReceiver should be started with root privileges",
@@ -443,21 +433,6 @@ class MoenchDetectorControl(Device):
         memorized=True,
         hw_memorized=True,
         doc="full path of the last capture",
-    )
-    tiff_httppath_last = attribute(
-        display_level=DispLevel.EXPERT,
-        label="http path",
-        dtype="str",
-        access=AttrWriteType.READ,
-        doc="full http path for the last capture with file",
-    )
-    tiff_httppath_next = attribute(
-        display_level=DispLevel.EXPERT,
-        label="http path",
-        dtype="str",
-        access=AttrWriteType.READ,
-        doc="full http path for the next capture with file",
-        fisallowed="isWriteAvailable",
     )
 
     sum_image_last = attribute(
@@ -764,29 +739,7 @@ class MoenchDetectorControl(Device):
         return self._tiff_fullpath_last
 
     def write_tiff_fullpath_last(self, value):
-        self._tiff_fullpath_last = value
-
-    def read_tiff_httppath_last(self):
-        http_prefix = self.HTTP_HOST_ADDRESS
-        web_prefix = self.HTTP_ROOT_PATH
-        http_fullpath = http_prefix + web_prefix + self._tiff_fullpath_last
-        return http_fullpath
-
-    def write_tiff_httppath_next(self, value):
-        pass
-
-    def read_tiff_httppath_next(self):
-        http_prefix = self.HTTP_HOST_ADDRESS
-        web_prefix = self.HTTP_ROOT_PATH
-        filename = self.read_filename()
-        file_index = self.read_fileindex()
-        savepath = self.read_filepath()
-        fullpath = os.path.join(savepath, f"{filename}_{file_index}.tiff")
-        http_fullpath = http_prefix + web_prefix + fullpath
-        return http_fullpath
-
-    def write_tiff_httppath_last(self, value):
-        pass
+        self._tiff_fullpath_last=value
 
     def read_raw_detector_status(self):
         return str(self.moench_device.status)
