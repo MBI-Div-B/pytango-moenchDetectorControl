@@ -801,6 +801,16 @@ class MoenchDetectorControl(Device):
         loop.run_in_executor(None, self._pending_file)
         # update sum_image_last here
 
+    async def _async_pedestal_acquire(self, loop):
+        frame_mode_before = self.read_framemode()
+        frames_before = self.read_frames()
+        self.write_framemode(self.FrameMode.NEWPEDESTAL)
+        self.write_frames(5000)
+        await loop.run_in_executor(None, self._block_acquire)
+        self.write_framemode(frame_mode_before)
+        self.write_frames(frames_before)
+        loop.run_in_executor(None, self._pending_file)
+
     def _pending_file(self):
         c = 0
         MAX_ATTEMPTS = 16
@@ -819,6 +829,16 @@ class MoenchDetectorControl(Device):
         if self.moench_device.status == runStatus.IDLE:
             loop = asyncio.get_event_loop()
             future = loop.create_task(self._async_acquire(loop))
+        elif self.moench_device.status == runStatus.RUNNING:
+            self.info_stream("Detector is acquiring")
+        else:
+            self.error_stream("Unable to acquire")
+    
+    @command
+    async def acquire_pedestals(self):
+        if self.moench_device.status == runStatus.IDLE:
+            loop = asyncio.get_event_loop()
+            future = loop.create_task(self._async_pedestal_acquire(loop))
         elif self.moench_device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:
