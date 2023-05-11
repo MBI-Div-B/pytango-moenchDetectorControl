@@ -851,6 +851,7 @@ class MoenchDetectorControl(Device):
     @command
     def stop_acquire(self):
         self.moench_device.stop()
+        self.set_state(DevState.ON)
 
 
 if __name__ == "__main__":
