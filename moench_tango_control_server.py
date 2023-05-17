@@ -30,6 +30,7 @@ class MoenchDetectorControl(Device):
     _last_triggers = ""
     _last_image = np.zeros([400, 400], dtype=np.int)
     green_mode = GreenMode.Asyncio
+    _last_pedestal_index = 0
 
     class FrameMode(IntEnum):
         # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
@@ -243,6 +244,13 @@ class MoenchDetectorControl(Device):
         memorized=True,
         fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+    )
+    last_pedestal_index = attribute(
+        label="last pedestal index",
+        dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
     )
     frames = attribute(
         label="number of frames",
@@ -520,6 +528,12 @@ class MoenchDetectorControl(Device):
         else:
             self.moench_device.findex = value
 
+    def read_last_pedestal_index(self):
+        return self._last_pedestal_index
+
+    def write_last_pedestal_index(self, value):
+        self._last_pedestal_index = value
+
     def read_timing_mode(self):
         return self.TimingMode(self.moench_device.timing.value)
 
@@ -771,6 +785,8 @@ class MoenchDetectorControl(Device):
     def _block_acquire(self):
         self.set_state(DevState.MOVING)
         tiff_fullpath_current = self.read_tiff_fullpath_next()
+        if self.framemode == self.FrameMode.NEWPEDESTAL:
+            self.wirte_last_pedestal_index(self.read_fileindex())
         next_file_index = self.read_fileindex() + 1
         frames = self.read_frames()
         period = self.read_period()
