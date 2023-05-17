@@ -23,6 +23,7 @@ import random
 import datetime
 from skimage.io import imread
 from bidict import bidict
+import subprocess
 
 
 class MoenchDetectorControl(Device):
@@ -30,7 +31,12 @@ class MoenchDetectorControl(Device):
     _last_triggers = ""
     _last_image = np.zeros([400, 400], dtype=np.int)
     green_mode = GreenMode.Asyncio
-    _last_pedestal_index = 0
+    _last_pedestal_fullpath = ""
+    _last_filepath = ""
+    _last_filename = ""
+    _last_fileindex = 0
+    _process_data = True
+    _output_path = ""
 
     class FrameMode(IntEnum):
         # hence detectormode in slsdet uses strings (not enums) need to be converted to strings
@@ -175,6 +181,11 @@ class MoenchDetectorControl(Device):
         doc="path of all moench sls executables",
         default_value="/opt/slsDetectorPackage/build/bin/",
     )
+    MOENCH_RAWDATAPROCESS_PATH = device_property(
+        dtype="str",
+        doc="path for post-processing executable",
+        default_value="/opt/moench-slsDetectorGroup_4_sigma/bin",
+    )
 
     exposure = attribute(
         label="exposure",
@@ -229,6 +240,15 @@ class MoenchDetectorControl(Device):
         memorized=True,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
+    last_filename = attribute(
+        label="last filename",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        fisallowed="isWriteAvailable",
+        memorized=True,
+        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+        display_level=DispLevel.EXPERT,
+    )
     filepath = attribute(
         label="filepath",
         dtype="str",
@@ -236,6 +256,19 @@ class MoenchDetectorControl(Device):
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         doc="dir where data files will be written",
+    )
+    output_path = attribute(
+        label="output path",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        doc="dir where the single frames will be written",
+    )
+    last_filepath = attribute(
+        label="last filepath",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        display_level=DispLevel.EXPERT,
     )
     fileindex = attribute(
         label="file_index",
@@ -245,12 +278,25 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
-    last_pedestal_index = attribute(
-        label="last pedestal index",
+    process_data = attribute(
+        label="process data",
+        dtype="bool",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+    )
+    last_fileindex = attribute(
+        label="last file file_index",
         dtype="int",
+        access=AttrWriteType.READ_WRITE,
+        display_level=DispLevel.EXPERT,
+    )
+    last_pedestal_fullpath = attribute(
+        label="last pedestal fullpath",
+        dtype="str",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
         hw_memorized=True,
+        doc="fullpath raw last pedestal file",
     )
     frames = attribute(
         label="number of frames",
@@ -434,6 +480,14 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         doc="full path of the next capture",
     )
+    raw_fullpath_next = attribute(
+        label="next capture path",
+        dtype="str",
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="full path of the last capture",
+    )
     tiff_fullpath_last = attribute(
         label="last capture path",
         dtype="str",
@@ -528,11 +582,23 @@ class MoenchDetectorControl(Device):
         else:
             self.moench_device.findex = value
 
-    def read_last_pedestal_index(self):
-        return self._last_pedestal_index
+    def read_process_data(self):
+        return self._process_data
 
-    def write_last_pedestal_index(self, value):
-        self._last_pedestal_index = value
+    def write_process_data(self, value):
+        self._process_data = value
+
+    def read_last_fileindex(self):
+        return self._last_fileindex
+
+    def write_last_fileindex(self, value):
+        self._last_fileindex = value
+
+    def read_last_pedestal_fullpath(self):
+        return self._last_pedestal_fullpath
+
+    def write_last_pedestal_fullpath(self, value):
+        self._last_pedestal_fullpath = value
 
     def read_timing_mode(self):
         return self.TimingMode(self.moench_device.timing.value)
@@ -559,6 +625,12 @@ class MoenchDetectorControl(Device):
         else:
             self.moench_device.fname = value
 
+    def read_last_filename(self):
+        return self._last_filename
+
+    def write_last_filename(self, value):
+        self._last_filename = value
+
     def read_filepath(self):
         return str(self.moench_device.fpath)
 
@@ -584,6 +656,18 @@ class MoenchDetectorControl(Device):
                     self.moench_device.fpath = value
                 except:
                     self.error_stream("not valid filepath")
+
+    def read_output_path(self):
+        return self._output_path
+
+    def write_output_path(self, value):
+        self._output_path = value
+
+    def read_last_filepath(self):
+        return self._last_filepath
+
+    def write_last_filepath(self, value):
+        self._last_filepath = value
 
     def read_frames(self):
         return self.moench_device.frames
@@ -749,6 +833,16 @@ class MoenchDetectorControl(Device):
     def write_tiff_fullpath_next(self, value):
         pass
 
+    def write_raw_fullpath_next(self, value):
+        pass
+
+    def read_raw_fullpath_next(self):
+        savepath = self.read_filepath()
+        filename = self.read_filename()
+        file_index = self.read_fileindex()
+        fullpath_raw = os.path.join(savepath, f"{filename}_d0_f0_{file_index}.raw")
+        return fullpath_raw
+
     def read_tiff_fullpath_last(self):
         return self._tiff_fullpath_last
 
@@ -782,11 +876,69 @@ class MoenchDetectorControl(Device):
         alreadyExists = os.path.exists(fullpath_tiff) or os.path.exists(fullpath_raw)
         return alreadyExists
 
+    # Usage is moench03RawDataProcessindir outdir fname(no extension) [runmin] [runmax] [pedfile (raw or tiff)] [threshold] [nframes] [xmin xmax ymin ymax] [gainmap]
+    # threshold <0 means analog; threshold=0 means cluster finder; threshold>0 means photon counting
+    # nframes <0 means sum everything; nframes=0 means one file per run; nframes>0 means one file every nframes
+    def _extract_single_frames(
+        self,
+        mode="counting",
+    ):
+        rawfile_dir = self.read_last_filepath()
+        raw_filename = self.read_last_filename()
+        raw_file_index = self.read_last_fileindex()
+        pedfile_fullpath = self.read_last_pedestal_fullpath()
+        output_dir = self.read_output_path()
+
+        flag = "0"
+        if mode == "counting":
+            flag = "0"
+        elif mode == "analog":
+            flag = "-1"
+        fullname_without_raw = f"{raw_filename}_d0_f0_{raw_file_index}"
+        fullname_raw = f"{raw_filename}_d0_f0_{raw_file_index}.raw"
+        fullpath_raw = os.path.join(rawfile_dir, fullname_raw)
+        executable_fullpath = os.path.join(
+            self.MOENCH_RAWDATAPROCESS_PATH, "moench03RawDataProcess"
+        )
+        export_folder_full_path = os.path.join(
+            output_dir, f"{raw_filename}_{raw_file_index:d}"
+        )
+
+        if not os.path.isdir(export_folder_full_path):
+            try:
+                os.makedirs(export_folder_full_path)
+                print(f"folder {export_folder_full_path} created")
+            except:
+                print("folder not found!")
+        exec_array = [
+            executable_fullpath,
+            rawfile_dir,
+            export_folder_full_path,
+            fullname_without_raw,
+            "0",
+            "0",
+            pedfile_fullpath,
+            flag,
+            "1",
+        ]
+        log_file = os.path.join(export_folder_full_path, f"{raw_file_index:d}.log")
+        log = open(log_file, "w")
+        if os.path.isfile(fullpath_raw):
+            subprocess.Popen(exec_array, stdout=log)
+
+    # todo: create attributes for last savepath, fileindex and filename. then update them all here and pass to the process data
+    # in the async_acquire
     def _block_acquire(self):
         self.set_state(DevState.MOVING)
         tiff_fullpath_current = self.read_tiff_fullpath_next()
-        if self.framemode == self.FrameMode.NEWPEDESTAL:
-            self.wirte_last_pedestal_index(self.read_fileindex())
+        raw_fullpath_current = self.read_raw_fullpath_next()
+
+        filename_current = self.read_filename()
+        fileindex_current = self.read_fileindex()
+        filepath_current = self.read_filepath()
+
+        if self.read_framemode() == self.FrameMode.NEWPEDESTAL:
+            self.write_last_pedestal_fullpath(raw_fullpath_current)
         next_file_index = self.read_fileindex() + 1
         frames = self.read_frames()
         period = self.read_period()
@@ -811,10 +963,15 @@ class MoenchDetectorControl(Device):
         filewriteEnabled = self.read_filewrite()
         if filewriteEnabled:
             self.write_fileindex(next_file_index)
+        self.write_last_filename(filename_current)
+        self.write_last_fileindex(fileindex_current)
+        self.write_last_filepath(filepath_current)
 
     async def _async_acquire(self, loop):
         await loop.run_in_executor(None, self._block_acquire)
-        loop.run_in_executor(None, self._pending_file)
+        await loop.run_in_executor(None, self._pending_file)
+        if self.read_process_data():
+            loop.run_in_executor(None, self._extract_single_frames)
         # update sum_image_last here
 
     async def _async_pedestal_acquire(self, loop):
