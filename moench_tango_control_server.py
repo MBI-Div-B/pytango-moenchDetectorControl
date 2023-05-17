@@ -824,6 +824,7 @@ class MoenchDetectorControl(Device):
                 "sum_image_last", self.read_sum_image_last(), 400, 400
             )
         self.set_state(DevState.ON)
+
     @command
     async def start_acquire(self):
         if self.moench_device.status == runStatus.IDLE:
@@ -833,7 +834,7 @@ class MoenchDetectorControl(Device):
             self.info_stream("Detector is acquiring")
         else:
             self.error_stream("Unable to acquire")
-    
+
     @command
     async def acquire_pedestals(self):
         if self.moench_device.status == runStatus.IDLE:
