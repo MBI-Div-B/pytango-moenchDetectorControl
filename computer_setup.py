@@ -23,7 +23,7 @@ def init_pc(
     if virtual:
         CONFIG_PATH = CONFIG_PATH_VIRTUAL  # for virtual detector
         subprocess.Popen(
-            f"{EXECUTABLES_PATH}moenchDetectorServer_virtual",
+            os.path.join(EXECUTABLES_PATH, "moenchDetectorServer_virtual"),
             shell=False,
         )
         time.sleep(5)
@@ -35,14 +35,14 @@ def init_pc(
     # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
     # configured for moench pc only
     subprocess.Popen(
-        f'sudo -S <<< "{ROOT_PASSWORD}" {EXECUTABLES_PATH}slsReceiver -t {SLS_RECEIVER_PORT}',
+        f'sudo -S <<< "{ROOT_PASSWORD}" {os.path.join(EXECUTABLES_PATH, "slsReceiver")} -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
     print("started slsReceicver")
     time.sleep(5)
     subprocess.Popen(
         [
-            f"{EXECUTABLES_PATH}moench03ZmqProcess",
+            os.path.join(EXECUTABLES_PATH, "moench03ZmqProcess"),
             PROCESSING_RX_IP,
             PROCESSING_RX_PORT,
             PROCESSING_TX_IP,
@@ -50,11 +50,15 @@ def init_pc(
             PROCESSING_CORES,
         ],
     )
-    subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
+    subprocess.call(
+        [os.path.join(EXECUTABLES_PATH, "sls_detector_put"), "config", CONFIG_PATH]
+    )
     time.sleep(5)
     print("Both processses are running")
     if virtual:
-        subprocess.call([f"{EXECUTABLES_PATH}sls_detector_put", "config", CONFIG_PATH])
+        subprocess.call(
+            [os.path.join(EXECUTABLES_PATH, "sls_detector_put"), "config", CONFIG_PATH]
+        )
         print("Uploaded the config the 2nd time for virtual")
     print("Both processses are running")
     return is_pc_ready()
@@ -119,6 +123,6 @@ def kill_processes_by_name(name, root_password):
 
 def start_10g_interface(root_password):
     subprocess.call(
-        f'sudo -S <<< "{root_password}"  ifup eno2',
+        f'sudo -S <<< "{root_password}" ifup eno2',
         shell=True,
     )

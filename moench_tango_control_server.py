@@ -243,9 +243,8 @@ class MoenchDetectorControl(Device):
     last_filename = attribute(
         label="last filename",
         dtype="str",
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         fisallowed="isWriteAvailable",
-        memorized=True,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
         display_level=DispLevel.EXPERT,
     )
@@ -255,6 +254,7 @@ class MoenchDetectorControl(Device):
         fisallowed="isWriteAvailable",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
+        hw_memorized=True,
         doc="dir where data files will be written",
     )
     output_path = attribute(
@@ -262,12 +262,13 @@ class MoenchDetectorControl(Device):
         dtype="str",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
+        hw_memorized=True,
         doc="dir where the single frames will be written",
     )
     last_filepath = attribute(
         label="last filepath",
         dtype="str",
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         display_level=DispLevel.EXPERT,
     )
     fileindex = attribute(
@@ -283,11 +284,12 @@ class MoenchDetectorControl(Device):
         dtype="bool",
         access=AttrWriteType.READ_WRITE,
         memorized=True,
+        hw_memorized=True,
     )
     last_fileindex = attribute(
         label="last file file_index",
         dtype="int",
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         display_level=DispLevel.EXPERT,
     )
     last_pedestal_fullpath = attribute(
