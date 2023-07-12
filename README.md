@@ -1,9 +1,7 @@
 # pytango-moenchDetectorControl
-![conda version](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/version.svg)
-![last updated](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/latest_release_date.svg
-)
-![platforms](https://anaconda.org/mbi-div-b/tangods_moenchcontrol/badges/platforms.svg
-)
+[![Conda version](https://img.shields.io/conda/v/mbi-div-b/tangods_moenchcontrol)](https://anaconda.org/MBI-DIV-B/tangods_moenchcontrol)
+![Platforms](https://img.shields.io/conda/pn/mbi-div-b/tangods_moenchcontrol)
+![Downloads](https://img.shields.io/conda/dn/mbi-div-b/tangods_moenchcontrol)
 
 ## Description
 

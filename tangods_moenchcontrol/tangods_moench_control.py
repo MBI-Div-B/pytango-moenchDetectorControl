@@ -22,6 +22,8 @@ from enum import IntEnum
 import asyncio
 import numpy as np
 from bidict import bidict
+import sys
+from os.path import join
 
 
 class MoenchDetectorControl(Device):
@@ -72,6 +74,11 @@ class MoenchDetectorControl(Device):
         DISCARD_EMPTY_FRAMES = 1
         DISCARD_PARTIAL_FRAMES = 2
 
+    SLS_RECEIVER_PATH = device_property(
+        dtype=str,
+        doc="full path to slsReceiver executable",
+        default_value=join(sys.prefix, "bin", "slsReceiver"),
+    )
     SLS_RECEIVER_PORT = device_property(
         dtype="str",
         doc="port of the slsReceiver instance, must match the config",
@@ -292,12 +299,10 @@ class MoenchDetectorControl(Device):
         MAX_ATTEMPTS = 5
         self.attempts_counter = 0
         kill_all_pc_processes(self.ROOT_PASSWORD)
-        time.sleep(3)
         init_pc(
             virtual=self.IS_VIRTUAL_DETECTOR,
+            SLS_RECEIVER_PATH=self.SLS_RECEIVER_PATH,
             SLS_RECEIVER_PORT=self.SLS_RECEIVER_PORT,
-            CONFIG_PATH_REAL=self.CONFIG_PATH_REAL,
-            CONFIG_PATH_VIRTUAL=self.CONFIG_PATH_VIRTUAL,
             VIRTUAL_DETECTOR_BIN=self.VIRTUAL_DETECTOR_BIN,
             ROOT_PASSWORD=self.ROOT_PASSWORD,
         )
@@ -309,6 +314,12 @@ class MoenchDetectorControl(Device):
             self.info_stream("Unable to start PC")
         self.info_stream("PC is ready")
         self.moench_device = Moench()
+        config = (
+            self.CONFIG_PATH_VIRTUAL
+            if self.IS_VIRTUAL_DETECTOR
+            else self.CONFIG_PATH_REAL
+        )
+        self.moench_device.config = config
         try:
             st = self.moench_device.rx_status
             self.info_stream("Current device status: %s" % st)
@@ -317,6 +328,7 @@ class MoenchDetectorControl(Device):
             self.set_state(DevState.FAULT)
             self.info_stream("Unable to establish connection with detector\n%s" % e)
             self.delete_device()
+        self.function_loop = asyncio.new_event_loop()
 
     def isWriteAvailable(self, value):
         # slsdet.runStatus.IDLE, ERROR, WAITING, RUN_FINISHED, TRANSMITTING, RUNNING, STOPPED
@@ -443,7 +455,7 @@ class MoenchDetectorControl(Device):
     def delete_device(self):
         try:
             deactivate_pc(self.ROOT_PASSWORD)
-            self.info_stream("SlsReceiver process was killed.")
+            self.info_stream("slsReceiver process was killed.")
         except Exception:
             self.info_stream("Unable to kill slsReceiver. Please kill it manually.")
 
@@ -465,15 +477,11 @@ class MoenchDetectorControl(Device):
         self.zmq_tango_device.stop_receiver()
         self.info_stream("stop receiver")
 
-    async def _async_acquire(self, loop):
-        await loop.run_in_executor(None, self._block_acquire)
-        # update sum_image_last here
-
     @command
     async def start_acquire(self):
         if self.moench_device.status == runStatus.IDLE:
-            loop = asyncio.get_event_loop()
-            future = loop.create_task(self._async_acquire(loop))
+            asyncio.set_event_loop(self.function_loop)
+            self.function_loop.run_in_executor(None, self._block_acquire)
         elif self.moench_device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:

@@ -1,20 +1,16 @@
 import subprocess
 import time
 import os
-from pathlib import PosixPath
 
 
 def init_pc(
-    virtual=False,
-    SLS_RECEIVER_PORT="1954",
-    VIRTUAL_DETECTOR_BIN="/opt/moench-slsDetectorGroup/build/bin/moenchDetectorServer_virtual",
-    CONFIG_PATH_REAL="/opt/moench-slsDetectorGroup/moench03_hardware.config",
-    CONFIG_PATH_VIRTUAL="/opt/moench-slsDetectorGroup/moench03_virtual.config",
-    ROOT_PASSWORD="dummy_password",
+    virtual,
+    SLS_RECEIVER_PATH,
+    SLS_RECEIVER_PORT,
+    VIRTUAL_DETECTOR_BIN,
+    ROOT_PASSWORD,
 ):
-    start_10g_interface(ROOT_PASSWORD)
     if virtual:
-        CONFIG_PATH = CONFIG_PATH_VIRTUAL  # for virtual detector
         subprocess.Popen(
             VIRTUAL_DETECTOR_BIN,
             shell=False,
@@ -23,37 +19,27 @@ def init_pc(
         print("configured for virtual detector")
 
     else:
-        CONFIG_PATH = CONFIG_PATH_REAL  # for  real (hardware) detector
         print("configured for real detector")
     # CONFIG_PATH = "/home/moench/detector/moench_2021.config" #for real detector
     # configured for moench pc only
     print("starting slsReceiver instance")
     print("change")
     subprocess.Popen(
-        f'sudo -S <<< "{ROOT_PASSWORD}" $(which slsReceiver) -t {SLS_RECEIVER_PORT}',
+        f'sudo -S <<< "{ROOT_PASSWORD}" {SLS_RECEIVER_PATH} -t {SLS_RECEIVER_PORT}',
         shell=True,
     )
     print("started slsReceiver")
-    print(f"Loading config {CONFIG_PATH} to the detector")
-    subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
     time.sleep(2)
     print("Setup is ready")
-    # otherwise it doesn't work for virtual detector
-    if virtual:
-        subprocess.Popen(f"sls_detector_put config {CONFIG_PATH}", shell=True)
-        print("Uploaded the config the 2nd time for virtual.")
     return is_sls_running()
 
 
 def kill_all_pc_processes(ROOT_PASSWORD):
-    kill_processes_by_name(
-        "slsReceiver",
-        root_password=ROOT_PASSWORD,
-    )
-    kill_processes_by_name(
-        "moenchDetectorServer_virtual",
-        root_password=ROOT_PASSWORD,
-    )
+    for process_name in ["slsReceiver", "moenchDetectorServer_virtual"]:
+        kill_processes_by_name(
+            process_name,
+            root_password=ROOT_PASSWORD,
+        )
 
 
 def deactivate_pc(ROOT_PASSWORD):
@@ -85,10 +71,3 @@ def kill_processes_by_name(name, root_password):
             )
     except:
         print("Error occurred while killing process")
-
-
-def start_10g_interface(root_password):
-    subprocess.Popen(
-        f'sudo -S <<< "{root_password}" ifup eno2',
-        shell=True,
-    )
