@@ -1,7 +1,7 @@
 name: create version tag
 on:
   push:
-    branches: master
+    branches: main
 jobs:
   upd-tag:
     runs-on: ubuntu-latest
