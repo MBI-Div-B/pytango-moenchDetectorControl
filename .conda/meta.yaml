@@ -18,8 +18,8 @@ requirements:
   run:
     - python>=3.10
     - pytango>=9.3.6
-    - slsdetlib=2022.2.3.dev0
-    - slsdet=2022.2.3.dev0
+    - slsdetlib>=2022.2.3.dev0
+    - slsdet>=2022.2.3.dev0
     - bidict>=0.22.1
     - numpy>=1.24.1
 
