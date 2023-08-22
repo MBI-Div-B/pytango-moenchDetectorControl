@@ -7,6 +7,8 @@ package:
 source:
   path: ../
 build:
+  entry_points:
+    - MoenchDetectorControl = tangods_moenchcontrol:main
   script: "{{ PYTHON }} -m pip install . -vv --no-deps"
   number: 0
 requirements:
