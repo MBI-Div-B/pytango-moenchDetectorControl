@@ -1,15 +1,13 @@
-{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+{% set version = load_file_regex(load_file='VERSION', regex_pattern='^[0-9.]+$') %}
 
 package:
-  name: tangods_moenchcontrol
-  version: {{ data.get('version') }}
+  name: tangods_moenchzmq
+  version: {{ version.string }}
 
 source:
   path: ../
 build:
-  entry_points:
-    - MoenchDetectorControl = tangods_moenchcontrol:main
-  script: "{{ PYTHON }} -m pip install . -vv"
+  script: "{{ PYTHON }} -m pip install . -vv --no-deps"
   number: 0
 requirements:
   build:

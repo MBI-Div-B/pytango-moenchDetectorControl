@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tangods_moenchcontrol"
+description = "tango DeviceServer for control of moench detector"
+keywords = ["tango device", "tango", "pytango", "moench"]
+readme = "README.md"
+authors = [
+    {name = "Leonid Lunin", email = "lunin.leonid@gmail.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    'pytango >= 9.3.6',
+    'numpy >= 1.24.1',
+    'pyzmq >= 23.2.0',
+    'numba >= 0.57',
+    'nexusformat >= 1.0.2'
+]
+license = {text = "MIT"}
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/lrlunin/pytango-moenchZmqServer"
+
+[project.scripts]
+MoenchDetectorControl = "tangods_moenchcontrol:main"
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.setuptools.packages.find]
+
+[tool.setuptools.package-data]
+tangods_moenchzmq = ["VERSION"]

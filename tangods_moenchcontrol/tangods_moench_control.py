@@ -459,18 +459,7 @@ class MoenchDetectorControl(Device):
         except Exception:
             self.info_stream("Unable to kill slsReceiver. Please kill it manually.")
 
-    def _block_acquire(self):
-        self.zmq_tango_device.start_receiver()
-        self.moench_device.startReceiver()
-        self.info_stream("start receiver")
-        self.moench_device.startDetector()
-        self.info_stream("start detector")
-        """
-        A detector takes a while after startDetector() execution to change its state.
-        So if there is no delay after startDetector() and self.get_state() check it's very probable that
-        detector will be still in ON mode (even not started to acquire.)
-        """
-        time.sleep(0.1)
+    def _receiver_stop_daemon(self):
         while self.read_detector_status() != DevState.ON:
             time.sleep(0.1)
         self.moench_device.stopReceiver()
@@ -480,8 +469,19 @@ class MoenchDetectorControl(Device):
     @command
     async def start_acquire(self):
         if self.moench_device.status == runStatus.IDLE:
+            self.zmq_tango_device.start_receiver()
+            self.moench_device.startReceiver()
+            self.info_stream("start receiver")
+            self.moench_device.startDetector()
+            self.info_stream("start detector")
+            """
+            A detector takes a while after startDetector() execution to change its state.
+            So if there is no delay after startDetector() and self.get_state() check it's very probable that
+            detector will be still in ON mode (even not started to acquire.)
+            """
+            time.sleep(0.1)
             asyncio.set_event_loop(self.function_loop)
-            self.function_loop.run_in_executor(None, self._block_acquire)
+            self.function_loop.run_in_executor(None, self._receiver_stop_daemon)
         elif self.moench_device.status == runStatus.RUNNING:
             self.info_stream("Detector is acquiring")
         else:
