@@ -1,7 +1,7 @@
 {% set version = load_file_regex(load_file='VERSION', regex_pattern='^[0-9.]+$') %}
 
 package:
-  name: tangods_moenchzmq
+  name: tangods_moenchcontrol
   version: {{ version.string }}
 
 source:
