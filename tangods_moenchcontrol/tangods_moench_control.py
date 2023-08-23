@@ -469,6 +469,7 @@ class MoenchDetectorControl(Device):
     @command
     async def start_acquire(self):
         if self.moench_device.status == runStatus.IDLE:
+            timing_mode = self.read_timing_mode()
             self.zmq_tango_device.start_receiver()
             self.moench_device.startReceiver()
             self.info_stream("start receiver")
@@ -479,7 +480,14 @@ class MoenchDetectorControl(Device):
             So if there is no delay after startDetector() and self.get_state() check it's very probable that
             detector will be still in ON mode (even not started to acquire.)
             """
-            time.sleep(0.1)
+            if timing_mode == self.TimingMode.TRIGGER_EXPOSURE:
+                timeout_start = time.time()
+                while time.time() < timeout_start + 2:
+                    if self.read_detector_status() == DevState.STANDBY:
+                        break
+                    time.sleep(0.1)
+            elif timing_mode == self.TimingMode.AUTO_TIMING:
+                time.sleep(0.2)
             asyncio.set_event_loop(self.function_loop)
             self.function_loop.run_in_executor(None, self._receiver_stop_daemon)
         elif self.moench_device.status == runStatus.RUNNING:
